@@ -28,19 +28,18 @@ node_modules/
 npm-debug.log
 yarn-debug.log
 yarn-error.log
-coverage/
-.next/
-.nuxt/
-dist/
-.cache/
+.pnpm-debug.log*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
-.DS_Store
-Thumbs.db
+.cursor/
 
 # Логи и временные файлы
 logs/
@@ -128,6 +127,7 @@ logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+uvicorn_*.txt
 
 # Backups
 backups/
@@ -151,4 +151,17 @@ terraform.tfstate.backup
 *.pem
 *.key
 *.crt
-*.pfx 
+*.pfx
+
+# Excel temp files
+~$*.xlsx
+~$*.xls
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# macOS
+.AppleDouble
+.LSOverride 
