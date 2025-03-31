@@ -9,6 +9,7 @@ from enum import Enum
 import uvicorn
 from datetime import datetime, date
 from complete_schema import ALL_SCHEMAS
+import json
 
 # Настройка логирования
 logging.basicConfig(
@@ -302,6 +303,31 @@ class FunctionalRelation(FunctionalRelationBase):
     
     class Config:
         from_attributes = True
+
+# Модели для ЦКП
+class VFPBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    metrics: Optional[dict] = None
+    status: Optional[str] = 'not_started'
+    progress: Optional[int] = 0
+    start_date: Optional[date] = None
+    target_date: Optional[date] = None
+    is_active: bool = True
+
+class VFPCreate(VFPBase):
+    entity_type: str
+    entity_id: int
+
+class VFP(VFPBase):
+    id: int
+    entity_type: str
+    entity_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True
 
 # ================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==================
 
@@ -2105,6 +2131,171 @@ def get_db_info():
         "tables": tables,
         "table_stats": table_stats
     }
+
+# Эндпоинты для ЦКП
+@app.post("/vfp/", response_model=VFP)
+def create_vfp(vfp: VFPCreate, db: sqlite3.Connection = Depends(get_db)):
+    cursor = db.cursor()
+    cursor.execute("""
+        INSERT INTO valuable_final_products (
+            entity_type, entity_id, name, description, metrics, 
+            status, progress, start_date, target_date, is_active,
+            created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    """, (
+        vfp.entity_type, vfp.entity_id, vfp.name, vfp.description,
+        json.dumps(vfp.metrics) if vfp.metrics else None,
+        vfp.status, vfp.progress, vfp.start_date, vfp.target_date, vfp.is_active
+    ))
+    db.commit()
+    
+    vfp_id = cursor.lastrowid
+    cursor.execute("SELECT * FROM valuable_final_products WHERE id = ?", (vfp_id,))
+    row = cursor.fetchone()
+    
+    return {
+        "id": row[0],
+        "entity_type": row[1],
+        "entity_id": row[2],
+        "name": row[3],
+        "description": row[4],
+        "metrics": json.loads(row[5]) if row[5] else None,
+        "status": row[6],
+        "progress": row[7],
+        "start_date": row[8],
+        "target_date": row[9],
+        "is_active": bool(row[10]),
+        "created_at": row[11],
+        "updated_at": row[12]
+    }
+
+@app.get("/vfp/{vfp_id}", response_model=VFP)
+def get_vfp(vfp_id: int, db: sqlite3.Connection = Depends(get_db)):
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM valuable_final_products WHERE id = ?", (vfp_id,))
+    row = cursor.fetchone()
+    
+    if not row:
+        raise HTTPException(status_code=404, detail="ЦКП не найден")
+    
+    return {
+        "id": row[0],
+        "entity_type": row[1],
+        "entity_id": row[2],
+        "name": row[3],
+        "description": row[4],
+        "metrics": json.loads(row[5]) if row[5] else None,
+        "status": row[6],
+        "progress": row[7],
+        "start_date": row[8],
+        "target_date": row[9],
+        "is_active": bool(row[10]),
+        "created_at": row[11],
+        "updated_at": row[12]
+    }
+
+@app.get("/vfp/", response_model=List[VFP])
+def list_vfps(
+    entity_type: Optional[str] = None,
+    entity_id: Optional[int] = None,
+    status: Optional[str] = None,
+    db: sqlite3.Connection = Depends(get_db)
+):
+    cursor = db.cursor()
+    query = "SELECT * FROM valuable_final_products WHERE 1=1"
+    params = []
+    
+    if entity_type:
+        query += " AND entity_type = ?"
+        params.append(entity_type)
+    if entity_id is not None:
+        query += " AND entity_id = ?"
+        params.append(entity_id)
+    if status:
+        query += " AND status = ?"
+        params.append(status)
+    
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    
+    return [{
+        "id": row[0],
+        "entity_type": row[1],
+        "entity_id": row[2],
+        "name": row[3],
+        "description": row[4],
+        "metrics": json.loads(row[5]) if row[5] else None,
+        "status": row[6],
+        "progress": row[7],
+        "start_date": row[8],
+        "target_date": row[9],
+        "is_active": bool(row[10]),
+        "created_at": row[11],
+        "updated_at": row[12]
+    } for row in rows]
+
+@app.put("/vfp/{vfp_id}", response_model=VFP)
+def update_vfp(vfp_id: int, vfp: VFPBase, db: sqlite3.Connection = Depends(get_db)):
+    cursor = db.cursor()
+    cursor.execute("SELECT id FROM valuable_final_products WHERE id = ?", (vfp_id,))
+    if not cursor.fetchone():
+        raise HTTPException(status_code=404, detail="ЦКП не найден")
+    
+    cursor.execute("""
+        UPDATE valuable_final_products SET
+            name = ?,
+            description = ?,
+            metrics = ?,
+            status = ?,
+            progress = ?,
+            start_date = ?,
+            target_date = ?,
+            is_active = ?,
+            updated_at = datetime('now')
+        WHERE id = ?
+    """, (
+        vfp.name,
+        vfp.description,
+        json.dumps(vfp.metrics) if vfp.metrics else None,
+        vfp.status,
+        vfp.progress,
+        vfp.start_date,
+        vfp.target_date,
+        vfp.is_active,
+        vfp_id
+    ))
+    db.commit()
+    
+    cursor.execute("SELECT * FROM valuable_final_products WHERE id = ?", (vfp_id,))
+    row = cursor.fetchone()
+    
+    return {
+        "id": row[0],
+        "entity_type": row[1],
+        "entity_id": row[2],
+        "name": row[3],
+        "description": row[4],
+        "metrics": json.loads(row[5]) if row[5] else None,
+        "status": row[6],
+        "progress": row[7],
+        "start_date": row[8],
+        "target_date": row[9],
+        "is_active": bool(row[10]),
+        "created_at": row[11],
+        "updated_at": row[12]
+    }
+
+@app.delete("/vfp/{vfp_id}")
+def delete_vfp(vfp_id: int, db: sqlite3.Connection = Depends(get_db)):
+    cursor = db.cursor()
+    cursor.execute("SELECT id FROM valuable_final_products WHERE id = ?", (vfp_id,))
+    if not cursor.fetchone():
+        raise HTTPException(status_code=404, detail="ЦКП не найден")
+    
+    cursor.execute("DELETE FROM valuable_final_products WHERE id = ?", (vfp_id,))
+    db.commit()
+    
+    return {"message": "ЦКП успешно удален"}
 
 if __name__ == "__main__":
     uvicorn.run("full_api:app", host="127.0.0.1", port=8001, reload=True) 
