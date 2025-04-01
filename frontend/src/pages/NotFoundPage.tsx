@@ -1,76 +1,42 @@
 import React from 'react';
-import { Box, Typography, Button } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { Container, Typography, Box, Button } from '@mui/material';
+import { Link } from 'react-router-dom';
 
 const NotFoundPage: React.FC = () => {
-  const navigate = useNavigate();
-  
   return (
-    <Box 
-      sx={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        height: '100%',
-        textAlign: 'center',
-        p: 3
-      }}
-    >
-      <Typography 
-        variant="h1" 
+    <Container maxWidth="md">
+      <Box 
         sx={{ 
-          fontSize: '8rem', 
-          fontWeight: 700, 
-          background: 'linear-gradient(45deg, #9D6AF5, #b350ff)',
-          backgroundClip: 'text',
-          textFillColor: 'transparent',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          mb: 2,
-          textShadow: '0 0 30px rgba(157, 106, 245, 0.6)'
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          minHeight: '50vh',
+          textAlign: 'center',
+          py: 5
         }}
       >
-        404
-      </Typography>
-      <Typography 
-        variant="h4" 
-        sx={{ 
-          mb: 3,
-          color: '#fff',
-          textShadow: '0 0 10px rgba(157, 106, 245, 0.5)'
-        }}
-      >
-        Страница не найдена
-      </Typography>
-      <Typography 
-        variant="body1" 
-        sx={{ 
-          mb: 4,
-          maxWidth: 600,
-          color: 'rgba(255,255,255,0.7)'
-        }}
-      >
-        Запрашиваемая страница не существует или была перемещена.
-      </Typography>
-      <Button 
-        variant="contained" 
-        onClick={() => navigate('/')}
-        sx={{
-          background: 'linear-gradient(45deg, #9D6AF5, #b350ff)',
-          px: 4,
-          py: 1,
-          borderRadius: 2,
-          boxShadow: '0 5px 15px rgba(157, 106, 245, 0.4)',
-          '&:hover': {
-            boxShadow: '0 8px 20px rgba(157, 106, 245, 0.6)',
-            background: 'linear-gradient(45deg, #a478f5, #c070ff)'
-          }
-        }}
-      >
-        Вернуться на главную
-      </Button>
-    </Box>
+        <Typography variant="h1" component="h1" gutterBottom>
+          404
+        </Typography>
+        <Typography variant="h4" component="h2" gutterBottom>
+          Страница не найдена
+        </Typography>
+        <Typography variant="body1" paragraph>
+          Запрашиваемая страница не существует или была перемещена.
+        </Typography>
+        <Button 
+          component={Link} 
+          to="/dashboard" 
+          variant="contained" 
+          color="primary" 
+          size="large"
+          sx={{ mt: 2 }}
+        >
+          Вернуться на главную
+        </Button>
+      </Box>
+    </Container>
   );
 };
 

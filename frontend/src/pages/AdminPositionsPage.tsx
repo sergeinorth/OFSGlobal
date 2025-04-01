@@ -36,31 +36,26 @@ import {
 } from '@mui/icons-material';
 import api from '../services/api';
 import { API_URL } from '../config';
-import { Link } from 'react-router-dom';
 
-// Типы данных для сотрудников
-interface Staff {
+// Типы данных для должностей
+interface Position {
   id: number;
-  email: string;
-  first_name: string;
-  last_name: string;
-  middle_name?: string;
-  phone?: string;
-  description?: string;
+  name: string;
+  code: string;
+  division_id?: number;
+  parent_id?: number;
   is_active: boolean;
-  organization_id?: number;
-  primary_organization_id?: number;
   created_at: string;
   updated_at: string;
 }
 
 // Типы для связанных данных
-interface Organization {
+interface Division {
   id: number;
   name: string;
 }
 
-const AdminStaffPage: React.FC = () => {
+const AdminPositionsPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -69,8 +64,9 @@ const AdminStaffPage: React.FC = () => {
   const [currentItem, setCurrentItem] = useState<any>(null);
   
   // Данные для таблицы
-  const [staff, setStaff] = useState<Staff[]>([]);
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [divisions, setDivisions] = useState<Division[]>([]);
+  const [parentPositions, setParentPositions] = useState<Position[]>([]);
 
   // Загружаем начальные данные
   useEffect(() => {
@@ -82,25 +78,26 @@ const AdminStaffPage: React.FC = () => {
     setError(null);
     
     try {
-      // Загружаем сотрудников
-      console.log(`Отправляем запрос к: ${API_URL}/staff/`);
-      const staffResponse = await api.get('/staff/');
-      console.log('Ответ сервера (staff):', staffResponse);
-      setStaff(staffResponse.data);
+      // Загружаем должности
+      console.log(`Отправляем запрос к: ${API_URL}/positions/`);
+      const positionsResponse = await api.get('/positions/');
+      console.log('Ответ сервера (positions):', positionsResponse);
+      setPositions(positionsResponse.data);
+      setParentPositions(positionsResponse.data);
       
-      // Загружаем организации для выпадающего списка
-      console.log(`Отправляем запрос к: ${API_URL}/organizations/`);
-      const orgResponse = await api.get('/organizations/');
-      console.log('Ответ сервера (organizations):', orgResponse);
-      setOrganizations(orgResponse.data);
+      // Загружаем подразделения для выпадающего списка
+      console.log(`Отправляем запрос к: ${API_URL}/divisions/`);
+      const divResponse = await api.get('/divisions/');
+      console.log('Ответ сервера (divisions):', divResponse);
+      setDivisions(divResponse.data);
     } catch (err) {
-      console.error('Ошибка при запросе staff:', err);
+      console.error('Ошибка при запросе positions:', err);
       const errorMessage = err instanceof Error 
         ? err.message 
         : (typeof err === 'object' && err !== null && 'message' in err) 
           ? String((err as any).message) 
           : String(err);
-      setError(`Ошибка при загрузке сотрудников: ${errorMessage}`);
+      setError(`Ошибка при загрузке должностей: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -113,14 +110,10 @@ const AdminStaffPage: React.FC = () => {
 
   const handleCreateItem = () => {
     setCurrentItem({ 
-      first_name: '',
-      last_name: '',
-      middle_name: '',
-      email: '',
-      phone: '',
-      description: '',
-      organization_id: null,
-      primary_organization_id: null,
+      name: '', 
+      code: '', 
+      division_id: null,
+      parent_id: null,
       is_active: true 
     });
     setEditDialogOpen(true);
@@ -135,7 +128,7 @@ const AdminStaffPage: React.FC = () => {
     setLoading(true);
     
     try {
-      await api.delete(`/staff/${currentItem.id}`);
+      await api.delete(`/positions/${currentItem.id}`);
       setSuccess('Запись успешно удалена');
       fetchData();
     } catch (err) {
@@ -153,12 +146,12 @@ const AdminStaffPage: React.FC = () => {
       let response;
       
       if (currentItem.id) {
-        // Обновляем существующего сотрудника
-        response = await api.put(`/staff/${currentItem.id}`, currentItem);
+        // Обновляем существующую должность
+        response = await api.put(`/positions/${currentItem.id}`, currentItem);
         setSuccess('Запись успешно обновлена');
       } else {
-        // Создаем нового сотрудника
-        response = await api.post(`/staff/`, currentItem);
+        // Создаем новую должность
+        response = await api.post(`/positions/`, currentItem);
         setSuccess('Запись успешно создана');
       }
       
@@ -187,40 +180,40 @@ const AdminStaffPage: React.FC = () => {
     }
   };
 
-  // Таблица сотрудников
-  const renderStaffTable = () => {
+  // Таблица должностей
+  const renderPositionsTable = () => {
     return (
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
               <TableCell>ID</TableCell>
-              <TableCell>ФИО</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Телефон</TableCell>
-              <TableCell>Организация</TableCell>
-              <TableCell>Активен</TableCell>
+              <TableCell>Название</TableCell>
+              <TableCell>Код</TableCell>
+              <TableCell>Подразделение</TableCell>
+              <TableCell>Родительская должность</TableCell>
+              <TableCell>Активна</TableCell>
               <TableCell>Действия</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {staff.map((emp) => (
-              <TableRow key={emp.id}>
-                <TableCell>{emp.id}</TableCell>
+            {positions.map((pos) => (
+              <TableRow key={pos.id}>
+                <TableCell>{pos.id}</TableCell>
+                <TableCell>{pos.name}</TableCell>
+                <TableCell>{pos.code}</TableCell>
                 <TableCell>
-                  {emp.last_name} {emp.first_name} {emp.middle_name || ''}
+                  {pos.division_id && divisions.find(div => div.id === pos.division_id)?.name || '—'}
                 </TableCell>
-                <TableCell>{emp.email}</TableCell>
-                <TableCell>{emp.phone || '—'}</TableCell>
                 <TableCell>
-                  {emp.organization_id && organizations.find(org => org.id === emp.organization_id)?.name || '—'}
+                  {pos.parent_id && parentPositions.find(parent => parent.id === pos.parent_id)?.name || '—'}
                 </TableCell>
-                <TableCell>{emp.is_active ? 'Да' : 'Нет'}</TableCell>
+                <TableCell>{pos.is_active ? 'Да' : 'Нет'}</TableCell>
                 <TableCell>
-                  <IconButton color="primary" onClick={() => handleEditItem(emp)}>
+                  <IconButton color="primary" onClick={() => handleEditItem(pos)}>
                     <EditIcon />
                   </IconButton>
-                  <IconButton color="error" onClick={() => handleDeleteItem(emp)}>
+                  <IconButton color="error" onClick={() => handleDeleteItem(pos)}>
                     <DeleteIcon />
                   </IconButton>
                 </TableCell>
@@ -242,92 +235,59 @@ const AdminStaffPage: React.FC = () => {
         fullWidth
       >
         <DialogTitle>
-          {currentItem?.id ? 'Редактировать сотрудника' : 'Создать сотрудника'}
+          {currentItem?.id ? 'Редактировать должность' : 'Создать должность'}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ my: 2 }}>
             <TextField
               fullWidth
               margin="dense"
-              name="last_name"
-              label="Фамилия"
-              value={currentItem?.last_name || ''}
+              name="name"
+              label="Название"
+              value={currentItem?.name || ''}
               onChange={handleInputChange}
               required
             />
             <TextField
               fullWidth
               margin="dense"
-              name="first_name"
-              label="Имя"
-              value={currentItem?.first_name || ''}
+              name="code"
+              label="Код"
+              value={currentItem?.code || ''}
               onChange={handleInputChange}
               required
-            />
-            <TextField
-              fullWidth
-              margin="dense"
-              name="middle_name"
-              label="Отчество"
-              value={currentItem?.middle_name || ''}
-              onChange={handleInputChange}
-            />
-            <TextField
-              fullWidth
-              margin="dense"
-              name="email"
-              label="Email"
-              type="email"
-              value={currentItem?.email || ''}
-              onChange={handleInputChange}
-              required
-            />
-            <TextField
-              fullWidth
-              margin="dense"
-              name="phone"
-              label="Телефон"
-              value={currentItem?.phone || ''}
-              onChange={handleInputChange}
-            />
-            <TextField
-              fullWidth
-              margin="dense"
-              name="description"
-              label="Описание"
-              multiline
-              rows={3}
-              value={currentItem?.description || ''}
-              onChange={handleInputChange}
             />
             <FormControl fullWidth margin="dense">
-              <InputLabel>Организация</InputLabel>
+              <InputLabel>Подразделение</InputLabel>
               <Select
-                name="organization_id"
-                value={currentItem?.organization_id || ''}
+                name="division_id"
+                value={currentItem?.division_id || ''}
                 onChange={handleSelectChange}
               >
                 <MenuItem value="">Не выбрано</MenuItem>
-                {organizations.map(org => (
-                  <MenuItem key={org.id} value={org.id}>{org.name}</MenuItem>
+                {divisions.map(div => (
+                  <MenuItem key={div.id} value={div.id}>{div.name}</MenuItem>
                 ))}
               </Select>
             </FormControl>
             <FormControl fullWidth margin="dense">
-              <InputLabel>Основная организация</InputLabel>
+              <InputLabel>Родительская должность</InputLabel>
               <Select
-                name="primary_organization_id"
-                value={currentItem?.primary_organization_id || ''}
+                name="parent_id"
+                value={currentItem?.parent_id || ''}
                 onChange={handleSelectChange}
               >
                 <MenuItem value="">Не выбрано</MenuItem>
-                {organizations.map(org => (
-                  <MenuItem key={org.id} value={org.id}>{org.name}</MenuItem>
-                ))}
+                {parentPositions.map(pos => 
+                  // Исключаем текущую должность из списка возможных родителей
+                  pos.id !== currentItem?.id && (
+                    <MenuItem key={pos.id} value={pos.id}>{pos.name}</MenuItem>
+                  )
+                )}
               </Select>
             </FormControl>
             <FormControl fullWidth margin="dense">
-              <InputLabel>Активен</InputLabel>
+              <InputLabel>Активна</InputLabel>
               <Select
                 name="is_active"
                 value={currentItem?.is_active ? "true" : "false"}
@@ -371,7 +331,7 @@ const AdminStaffPage: React.FC = () => {
         <DialogTitle>Подтверждение удаления</DialogTitle>
         <DialogContent>
           <Typography>
-            Вы действительно хотите удалить этого сотрудника? Это действие нельзя отменить.
+            Вы действительно хотите удалить эту должность? Это действие нельзя отменить.
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -399,7 +359,7 @@ const AdminStaffPage: React.FC = () => {
       <Box sx={{ my: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h4" component="h1" gutterBottom>
-            Администрирование сотрудников
+            Администрирование должностей
           </Typography>
           
           <Box>
@@ -427,7 +387,7 @@ const AdminStaffPage: React.FC = () => {
           {loading && <LinearProgress />}
           
           <Box sx={{ p: 3 }}>
-            {renderStaffTable()}
+            {renderPositionsTable()}
           </Box>
         </Paper>
         
@@ -458,4 +418,4 @@ const AdminStaffPage: React.FC = () => {
   );
 };
 
-export default AdminStaffPage; 
+export default AdminPositionsPage; 

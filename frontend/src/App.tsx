@@ -21,17 +21,14 @@ import NotFoundPage from './pages/NotFoundPage';
 // Новые страницы администрирования с использованием роутера
 import AdminOrganizationsPage from './pages/AdminOrganizationsPage';
 import AdminStaffPage from './pages/AdminStaffPage';
-// Другие страницы администрирования будут добавлены позже
+import AdminDivisionsPage from './pages/AdminDivisionsPage';
+import AdminPositionsPage from './pages/AdminPositionsPage';
+import AdminFunctionalRelationsPage from './pages/AdminFunctionalRelationsPage';
 
 // Placeholder компоненты для других страниц
 function Reports() { return <div>Reports Page</div>; }
 function Profile() { return <div>Profile Page</div>; }
 function Settings() { return <div>Settings Page</div>; }
-
-// Временные заглушки для остальных страниц админки
-const AdminDivisionsPage = () => <div>Страница администрирования подразделений (в разработке)</div>;
-const AdminPositionsPage = () => <div>Страница администрирования должностей (в разработке)</div>;
-const AdminFunctionalRelationsPage = () => <div>Страница администрирования функциональных связей (в разработке)</div>;
 
 const App: React.FC = () => {
   return (
