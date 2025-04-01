@@ -1,127 +1,222 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Box, Container, Paper, Fade, CircularProgress, styled } from '@mui/material';
+import { ReactFlowProvider } from 'reactflow';
 import OrganizationTree from '../components/organization/OrganizationTree';
-import '../styles/OrganizationStructurePage.css';
+import OrgTreeControls from '../components/organization/OrgTreeControls';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { EntityNode, EntityRelation } from '../components/organization/types';
+import ReactFlowGraph from '../components/organization/ReactFlowGraph';
+
+// Стилизованные компоненты
+const PageContainer = styled(Container)(({ theme }) => ({
+  maxWidth: '100%',
+  paddingTop: theme.spacing(3),
+  paddingBottom: theme.spacing(3),
+  position: 'relative',
+}));
+
+const StyledPaper = styled(Paper)(({ theme }) => ({
+  height: 'calc(100vh - 180px)', // Увеличиваем высоту, так как убрали заголовок
+  padding: theme.spacing(2),
+  backgroundColor: 'rgba(26, 26, 30, 0.7)',
+  borderRadius: 12,
+  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+  border: '1px solid rgba(157, 106, 245, 0.2)',
+  position: 'relative',
+  overflow: 'hidden',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '1px',
+    background: 'linear-gradient(90deg, transparent, rgba(157, 106, 245, 0.5), transparent)',
+  },
+}));
+
+const LoadingOverlay = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: 'rgba(26, 26, 30, 0.7)',
+  zIndex: 10,
+  borderRadius: 12,
+  backdropFilter: 'blur(4px)',
+}));
+
+const ControlsContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  justifyContent: 'flex-start',
+  alignItems: 'center',
+  marginBottom: theme.spacing(2),
+}));
+
+// Временные моковые данные для наших графов
+const mockNodes: Record<string, EntityNode[]> = {
+  business: [
+    { id: '1', name: 'Генеральный директор', type: 'business', position: 'CEO' },
+    { id: '2', name: 'Финансовый отдел', type: 'business' },
+    { id: '3', name: 'Бухгалтерия', type: 'business' },
+    { id: '4', name: 'Финансовый директор', type: 'business', position: 'CFO', manager: 'Генеральный директор' },
+    { id: '5', name: 'Главный бухгалтер', type: 'business', position: 'Chief Accountant' },
+    { id: '6', name: 'IT отдел', type: 'business' },
+    { id: '7', name: 'Разработка', type: 'business' },
+    { id: '8', name: 'Поддержка', type: 'business' },
+    { id: '9', name: 'CTO', type: 'business', position: 'CTO', manager: 'Генеральный директор' },
+  ],
+  legal: [
+    { id: 'l1', name: 'ООО "Компания"', type: 'legal' },
+    { id: 'l2', name: 'ЗАО "Филиал 1"', type: 'legal' },
+    { id: 'l3', name: 'ООО "Дочерняя компания"', type: 'legal' },
+    { id: 'l4', name: 'ИП Иванов', type: 'legal' },
+  ],
+  territorial: [
+    { id: 't1', name: 'Головной офис', type: 'territorial', position: 'Москва' },
+    { id: 't2', name: 'Филиал Санкт-Петербург', type: 'territorial' },
+    { id: 't3', name: 'Филиал Новосибирск', type: 'territorial' },
+    { id: 't4', name: 'Филиал Казань', type: 'territorial' },
+    { id: 't5', name: 'Региональный директор', type: 'territorial', position: 'Директор СПб филиала' },
+  ],
+};
+
+const mockEdges: Record<string, EntityRelation[]> = {
+  business: [
+    { id: 'e1', from: '1', to: '2', type: 'department' },
+    { id: 'e2', from: '1', to: '6', type: 'department' },
+    { id: 'e3', from: '2', to: '3', type: 'department' },
+    { id: 'e4', from: '1', to: '4', type: 'manager' },
+    { id: 'e5', from: '4', to: '5', type: 'manager' },
+    { id: 'e6', from: '6', to: '7', type: 'department' },
+    { id: 'e7', from: '6', to: '8', type: 'department' },
+    { id: 'e8', from: '1', to: '9', type: 'manager' },
+    { id: 'e9', from: '9', to: '6', type: 'functional' },
+  ],
+  legal: [
+    { id: 'le1', from: 'l1', to: 'l2', type: 'department' },
+    { id: 'le2', from: 'l1', to: 'l3', type: 'department' },
+    { id: 'le3', from: 'l3', to: 'l4', type: 'functional' },
+  ],
+  territorial: [
+    { id: 'te1', from: 't1', to: 't2', type: 'department' },
+    { id: 'te2', from: 't1', to: 't3', type: 'department' },
+    { id: 'te3', from: 't1', to: 't4', type: 'department' },
+    { id: 'te4', from: 't2', to: 't5', type: 'manager' },
+  ],
+};
 
 const OrganizationStructurePage: React.FC = () => {
-  const [viewMode, setViewMode] = useState<'tree' | 'list'>('tree');
-  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
-  const [editMode, setEditMode] = useState<boolean>(false);
+  // Используем location и navigate для работы с URL
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // Извлекаем viewMode из URL
+  const getViewModeFromPath = (): 'business' | 'legal' | 'territorial' => {
+    const path = location.pathname;
+    if (path.includes('/legal')) return 'legal';
+    if (path.includes('/territorial')) return 'territorial';
+    return 'business'; // По умолчанию
+  };
 
-  // Моковые данные для списка организаций
-  const organizations = [
-    { id: '1', name: 'ООО Фотоматрица' },
-    { id: '2', name: 'Фотоматрица-Север' },
-    { id: '3', name: 'Фотоматрица-Юг' },
-  ];
+  const [viewMode, setViewMode] = useState<'business' | 'legal' | 'territorial'>(getViewModeFromPath());
+  const [displayMode, setDisplayMode] = useState<'tree' | 'list'>('tree');
+  const [loading, setLoading] = useState(false);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
-  // Обработчик переключения режима редактирования
-  const toggleEditMode = () => {
-    setEditMode(!editMode);
+  // Эффект для синхронизации viewMode с URL
+  useEffect(() => {
+    const currentMode = getViewModeFromPath();
+    if (currentMode !== viewMode) {
+      setViewMode(currentMode);
+    }
+  }, [location.pathname]);
+
+  // Функция для изменения режима просмотра, обновляет также URL
+  const handleViewModeChange = (mode: 'business' | 'legal' | 'territorial') => {
+    setLoading(true);
+    setViewMode(mode);
+    
+    // Обновляем URL в соответствии с выбранным режимом
+    const basePath = '/organization-structure';
+    const newPath = mode === 'business' 
+      ? `${basePath}/business`
+      : mode === 'legal' 
+        ? `${basePath}/legal` 
+        : `${basePath}/territorial`;
+    
+    navigate(newPath);
+    
+    // Имитируем загрузку данных
+    setTimeout(() => {
+      setLoading(false);
+    }, 800);
+  };
+
+  // Обработчик выбора узла
+  const handleNodeSelect = (nodeId: string | null) => {
+    setSelectedNodeId(nodeId);
+    console.log(`Выбран узел: ${nodeId}`);
   };
 
   return (
-    <div className="structure-page">
-      <header className="structure-header">
-        <div className="logo-container">
-          <Link to="/">
-            <img src="/images/ofs_logo.png" alt="OFS Global" className="logo" />
-          </Link>
-          <h1>Организационная структура</h1>
-        </div>
-        <nav className="structure-nav">
-          <ul>
-            <li><Link to="/">Главная</Link></li>
-            <li><Link to="/dashboard">Панель управления</Link></li>
-            <li className="active"><Link to="/structure">Структура</Link></li>
-            <li><Link to="/locations">Локации</Link></li>
-          </ul>
-        </nav>
-      </header>
+    <PageContainer>
+      <ControlsContainer>
+        {/* Переключатель дерево/список теперь слева */}
+        <OrgTreeControls
+          displayMode={displayMode}
+          onDisplayModeChange={setDisplayMode}
+        />
+        {/* Пустое пространство справа */}
+      </ControlsContainer>
 
-      <main className="structure-content">
-        <aside className="structure-sidebar">
-          <div className="sidebar-header">
-            <h3>Организации</h3>
-          </div>
-          <ul className="organization-list">
-            {organizations.map(org => (
-              <li 
-                key={org.id} 
-                className={selectedOrgId === org.id ? 'active' : ''}
-                onClick={() => setSelectedOrgId(org.id)}
-              >
-                {org.name}
-              </li>
-            ))}
-          </ul>
-
-          <div className="view-controls">
-            <h3>Вид отображения</h3>
-            <div className="view-buttons">
-              <button 
-                className={viewMode === 'tree' ? 'active' : ''} 
-                onClick={() => setViewMode('tree')}
-              >
-                Дерево
-              </button>
-              <button 
-                className={viewMode === 'list' ? 'active' : ''} 
-                onClick={() => setViewMode('list')}
-              >
-                Список
-              </button>
-            </div>
-          </div>
-
-          <div className="edit-mode-control">
-            <h3>Режим редактирования</h3>
-            <label className="switch">
-              <input 
-                type="checkbox" 
-                checked={editMode} 
-                onChange={toggleEditMode} 
-              />
-              <span className="slider round"></span>
-            </label>
-            <span className="mode-label">{editMode ? 'Включен' : 'Выключен'}</span>
-          </div>
-
-          <div className="export-controls">
-            <h3>Экспорт</h3>
-            <button className="export-button">Экспорт в PDF</button>
-            <button className="export-button">Экспорт в Excel</button>
-          </div>
-        </aside>
-
-        <section className="structure-visualization">
-          {selectedOrgId ? (
-            viewMode === 'tree' ? (
-              <OrganizationTree 
-                organizationId={selectedOrgId} 
-                readOnly={!editMode}
-              />
+      <StyledPaper>
+        <Fade in={!loading} timeout={500}>
+          <Box sx={{ height: '100%', width: '100%' }}>
+            {/* Используем новый компонент с ReactFlow */}
+            {displayMode === 'tree' ? (
+              <ReactFlowProvider>
+                <ReactFlowGraph
+                  type={viewMode}
+                  nodes={mockNodes[viewMode]}
+                  edges={mockEdges[viewMode]}
+                  selectedNodeId={selectedNodeId || undefined}
+                  onNodeSelect={handleNodeSelect}
+                  height={700}
+                />
+              </ReactFlowProvider>
             ) : (
-              <div className="list-view">
-                <h2>Список сотрудников (в разработке)</h2>
-                <p>Здесь будет отображаться структура в виде списка</p>
-              </div>
-            )
-          ) : (
-            <div className="select-organization">
-              <h2>Выберите организацию</h2>
-              <p>Пожалуйста, выберите организацию из списка слева для отображения структуры</p>
-            </div>
-          )}
-        </section>
-      </main>
-
-      <footer className="structure-footer">
-        <div className="copyright">
-          &copy; {new Date().getFullYear()} OFS Global. Все права защищены.
-        </div>
-      </footer>
-    </div>
+              <OrganizationTree
+                organizationId="1"
+                viewMode={viewMode}
+                displayMode={displayMode}
+                zoomLevel={100}
+                detailLevel={1}
+              />
+            )}
+          </Box>
+        </Fade>
+        
+        {loading && (
+          <LoadingOverlay>
+            <CircularProgress 
+              size={60} 
+              sx={{ 
+                color: '#9D6AF5',
+                '& .MuiCircularProgress-circle': {
+                  strokeLinecap: 'round',
+                  strokeWidth: 4,
+                }
+              }} 
+            />
+          </LoadingOverlay>
+        )}
+      </StyledPaper>
+    </PageContainer>
   );
 };
 
