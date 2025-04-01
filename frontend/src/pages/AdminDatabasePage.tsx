@@ -40,6 +40,72 @@ import {
 import api from '../services/api';
 import { API_URL } from '../config';
 
+// Типы данных для разных таблиц
+interface Organization {
+  id: number;
+  name: string;
+  code: string;
+  legal_name?: string;
+  ckp?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Division {
+  id: number;
+  name: string;
+  code: string;
+  description?: string;
+  is_active: boolean;
+  organization_id: number;
+  parent_id?: number;
+  ckp?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Position {
+  id: number;
+  name: string;
+  code: string;
+  description?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Staff {
+  id: number;
+  name?: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  middle_name?: string;
+  phone?: string;
+  description?: string;
+  is_active: boolean;
+  organization_id?: number;
+  primary_organization_id?: number;
+  position_id?: number;
+  division_id?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface FunctionalRelation {
+  id: number;
+  manager_id: number;
+  subordinate_id: number;
+  source_id?: number;
+  target_id?: number;
+  relation_type: string;
+  description?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
@@ -84,65 +150,90 @@ const AdminDatabasePage: React.FC = () => {
   const [currentTable, setCurrentTable] = useState<string>('');
 
   // Данные для разных таблиц
-  const [organizations, setOrganizations] = useState<any[]>([]);
-  const [divisions, setDivisions] = useState<any[]>([]);
-  const [positions, setPositions] = useState<any[]>([]);
-  const [staff, setStaff] = useState<any[]>([]);
-  const [functionalRelations, setFunctionalRelations] = useState<any[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [divisions, setDivisions] = useState<Division[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [staff, setStaff] = useState<Staff[]>([]);
+  const [functionalRelations, setFunctionalRelations] = useState<FunctionalRelation[]>([]);
 
   // Загружаем начальные данные
   useEffect(() => {
-    fetchTableData(getCurrentTableName());
-  }, [tabValue]);
+    // Загружаем данные для всех таблиц сразу
+    console.log('Загружаем все данные...');
+    fetchAllData();
+  }, []);
 
-  const getCurrentTableName = () => {
-    switch (tabValue) {
-      case 0: return 'organizations';
-      case 1: return 'divisions';
-      case 2: return 'positions';
-      case 3: return 'staff';
-      case 4: return 'functional-relations';
-      default: return 'organizations';
-    }
-  };
-
-  const fetchTableData = async (tableName: string) => {
+  const fetchAllData = async () => {
     setLoading(true);
     setError(null);
-    setCurrentTable(tableName);
     
+    // Загружаем организации
     try {
-      console.log(`Отправляем запрос к: ${API_URL}/${tableName}/`);
-      const response = await api.get(`/${tableName}/`);
-      console.log('Ответ сервера:', response);
-      
-      switch (tableName) {
-        case 'organizations':
-          setOrganizations(response.data);
-          break;
-        case 'divisions':
-          setDivisions(response.data);
-          break;
-        case 'positions':
-          setPositions(response.data);
-          break;
-        case 'staff':
-          setStaff(response.data);
-          break;
-        case 'functional-relations':
-          setFunctionalRelations(response.data);
-          break;
-      }
+      console.log(`Отправляем запрос к: ${API_URL}/organizations/`);
+      const orgResponse = await api.get('/organizations/');
+      console.log('Ответ сервера (organizations):', orgResponse);
+      setOrganizations(orgResponse.data);
     } catch (err) {
-      console.error('Ошибка при запросе:', err);
-      setError('Ошибка при загрузке данных: ' + (err instanceof Error ? err.message : String(err)));
-    } finally {
-      setLoading(false);
+      console.error('Ошибка при запросе organizations:', err);
     }
+    
+    // Загружаем подразделения
+    try {
+      console.log(`Отправляем запрос к: ${API_URL}/divisions/`);
+      const divResponse = await api.get('/divisions/');
+      console.log('Ответ сервера (divisions):', divResponse);
+      setDivisions(divResponse.data);
+    } catch (err) {
+      console.error('Ошибка при запросе divisions:', err);
+    }
+    
+    // Загружаем должности
+    try {
+      console.log(`Отправляем запрос к: ${API_URL}/positions/`);
+      const posResponse = await api.get('/positions/');
+      console.log('Ответ сервера (positions):', posResponse);
+      setPositions(posResponse.data);
+    } catch (err) {
+      console.error('Ошибка при запросе positions:', err);
+    }
+    
+    // Загружаем сотрудников
+    try {
+      console.log(`Отправляем запрос к: ${API_URL}/staff/`);
+      const staffResponse = await api.get('/staff/');
+      console.log('Ответ сервера (staff):', staffResponse);
+      setStaff(staffResponse.data);
+    } catch (err) {
+      console.error('Ошибка при запросе staff:', err);
+    }
+    
+    // Загружаем функциональные связи
+    try {
+      console.log(`Отправляем запрос к: ${API_URL}/functional-relations/`);
+      const relResponse = await api.get('/functional-relations/');
+      console.log('Ответ сервера (functional-relations):', relResponse);
+      setFunctionalRelations(relResponse.data);
+    } catch (err) {
+      console.error('Ошибка при запросе functional-relations:', err);
+    }
+    
+    setLoading(false);
   };
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (event: React.SyntheticEvent | null, newValue: number) => {
+    console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+    console.log(`handleTabChange ВЫЗВАН с newValue: ${newValue}`);
+    console.log(`ТЕКУЩЕЕ ЗНАЧЕНИЕ tabValue: ${tabValue}`);
+    console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+    
+    console.log('ПЕРЕД setTabValue');
     setTabValue(newValue);
+    console.log('ПОСЛЕ setTabValue');
+    
+    const tables = ['organizations', 'divisions', 'positions', 'staff', 'functional-relations'];
+    console.log('ПЕРЕД setCurrentTable');
+    setCurrentTable(tables[newValue] || 'organizations');
+    console.log('ПОСЛЕ setCurrentTable');
   };
 
   const handleEditItem = (item: any) => {
@@ -187,7 +278,7 @@ const AdminDatabasePage: React.FC = () => {
     try {
       await api.delete(`/${currentTable}/${currentItem.id}`);
       setSuccess('Запись успешно удалена');
-      fetchTableData(currentTable);
+      fetchAllData();
     } catch (err) {
       setError('Ошибка при удалении: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
@@ -212,7 +303,7 @@ const AdminDatabasePage: React.FC = () => {
         setSuccess('Запись успешно создана');
       }
       
-      fetchTableData(currentTable);
+      fetchAllData();
     } catch (err) {
       setError('Ошибка при сохранении: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
@@ -240,24 +331,6 @@ const AdminDatabasePage: React.FC = () => {
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, checked } = e.target;
     setCurrentItem({ ...currentItem, [name]: checked });
-  };
-
-  // Рендер соответствующей таблице
-  const renderTable = () => {
-    switch (tabValue) {
-      case 0:
-        return renderOrganizationsTable();
-      case 1:
-        return renderDivisionsTable();
-      case 2:
-        return renderPositionsTable();
-      case 3:
-        return renderStaffTable();
-      case 4:
-        return renderFunctionalRelationsTable();
-      default:
-        return null;
-    }
   };
 
   // Таблица организаций
@@ -838,7 +911,7 @@ const AdminDatabasePage: React.FC = () => {
             <Button
               variant="outlined"
               startIcon={<RefreshIcon />}
-              onClick={() => fetchTableData(getCurrentTableName())}
+              onClick={() => fetchAllData()}
               sx={{ mr: 1 }}
             >
               Обновить
@@ -856,37 +929,62 @@ const AdminDatabasePage: React.FC = () => {
         </Box>
         
         <Paper sx={{ width: '100%', mb: 2 }}>
-          <Tabs
-            value={tabValue}
-            onChange={handleTabChange}
-            indicatorColor="primary"
-            textColor="primary"
-            variant="fullWidth"
+          {/* Простые кнопки вместо MUI Tabs */}
+          <Box 
+            sx={{ 
+              display: 'flex', 
+              borderBottom: '2px solid #9c27b0',
+              backgroundColor: '#f5f5f5',
+              width: '100%',
+              overflowX: 'auto'
+            }}
           >
-            <Tab label="Организации" {...a11yProps(0)} />
-            <Tab label="Подразделения" {...a11yProps(1)} />
-            <Tab label="Должности" {...a11yProps(2)} />
-            <Tab label="Сотрудники" {...a11yProps(3)} />
-            <Tab label="Функциональные связи" {...a11yProps(4)} />
-          </Tabs>
+            {[
+              { name: "ОРГАНИЗАЦИИ", value: 0, table: "organizations" },
+              { name: "ПОДРАЗДЕЛЕНИЯ", value: 1, table: "divisions" },
+              { name: "ДОЛЖНОСТИ", value: 2, table: "positions" },
+              { name: "СОТРУДНИКИ", value: 3, table: "staff" },
+              { name: "ФУНКЦИОНАЛЬНЫЕ СВЯЗИ", value: 4, table: "functional-relations" }
+            ].map((tab) => (
+              <Button
+                key={tab.value}
+                variant={tabValue === tab.value ? "contained" : "text"}
+                color={tabValue === tab.value ? "primary" : "inherit"}
+                onClick={() => {
+                  console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+                  console.log(`КЛИК СРАБОТАЛ: ${tab.name}, value: ${tab.value}`);
+                  console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+                  handleTabChange(null, tab.value);
+                }}
+                sx={{
+                  borderRadius: 0,
+                  py: 1.5,
+                  px: 2,
+                  fontSize: '0.85rem',
+                  fontWeight: 'bold',
+                  minWidth: '150px',
+                  height: '50px',
+                  backgroundColor: tabValue === tab.value ? '#9c27b0' : 'transparent',
+                  color: tabValue === tab.value ? 'white' : 'black',
+                  '&:hover': {
+                    backgroundColor: tabValue === tab.value ? '#7b1fa2' : '#e0e0e0',
+                  }
+                }}
+              >
+                {tab.name}
+              </Button>
+            ))}
+          </Box>
           
           {loading && <LinearProgress />}
           
-          <TabPanel value={tabValue} index={0}>
-            {renderTable()}
-          </TabPanel>
-          <TabPanel value={tabValue} index={1}>
-            {renderTable()}
-          </TabPanel>
-          <TabPanel value={tabValue} index={2}>
-            {renderTable()}
-          </TabPanel>
-          <TabPanel value={tabValue} index={3}>
-            {renderTable()}
-          </TabPanel>
-          <TabPanel value={tabValue} index={4}>
-            {renderTable()}
-          </TabPanel>
+          <Box sx={{ p: 3 }}>
+            {tabValue === 0 && renderOrganizationsTable()}
+            {tabValue === 1 && renderDivisionsTable()}
+            {tabValue === 2 && renderPositionsTable()}
+            {tabValue === 3 && renderStaffTable()}
+            {tabValue === 4 && renderFunctionalRelationsTable()}
+          </Box>
         </Paper>
         
         {renderEditDialog()}

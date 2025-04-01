@@ -18,10 +18,20 @@ import TelegramBotPage from './pages/TelegramBotPage';
 import AdminDatabasePage from './pages/AdminDatabasePage';
 import NotFoundPage from './pages/NotFoundPage';
 
+// Новые страницы администрирования с использованием роутера
+import AdminOrganizationsPage from './pages/AdminOrganizationsPage';
+import AdminStaffPage from './pages/AdminStaffPage';
+// Другие страницы администрирования будут добавлены позже
+
 // Placeholder компоненты для других страниц
 function Reports() { return <div>Reports Page</div>; }
 function Profile() { return <div>Profile Page</div>; }
 function Settings() { return <div>Settings Page</div>; }
+
+// Временные заглушки для остальных страниц админки
+const AdminDivisionsPage = () => <div>Страница администрирования подразделений (в разработке)</div>;
+const AdminPositionsPage = () => <div>Страница администрирования должностей (в разработке)</div>;
+const AdminFunctionalRelationsPage = () => <div>Страница администрирования функциональных связей (в разработке)</div>;
 
 const App: React.FC = () => {
   return (
@@ -38,7 +48,21 @@ const App: React.FC = () => {
             <Route path="territorial" element={<OrganizationStructurePage />} />
           </Route>
           <Route path="functional-relations" element={<FunctionalRelationsPage />} />
-          <Route path="admin-database" element={<AdminDatabasePage />} />
+          
+          {/* Новая структура роутов для администрирования */}
+          <Route path="admin">
+            {/* Редирект с корневого пути admin на страницу организаций */}
+            <Route index element={<Navigate to="/admin/organizations" replace />} />
+            <Route path="organizations" element={<AdminOrganizationsPage />} />
+            <Route path="divisions" element={<AdminDivisionsPage />} />
+            <Route path="positions" element={<AdminPositionsPage />} />
+            <Route path="staff" element={<AdminStaffPage />} />
+            <Route path="functional-relations" element={<AdminFunctionalRelationsPage />} />
+          </Route>
+          
+          {/* Старый роут - оставляем для обратной совместимости, но редиректим на новую страницу */}
+          <Route path="admin-database" element={<Navigate to="/admin/organizations" replace />} />
+          
           <Route path="profile" element={<Profile />} />
           <Route path="settings" element={<Settings />} />
           <Route path="staff">

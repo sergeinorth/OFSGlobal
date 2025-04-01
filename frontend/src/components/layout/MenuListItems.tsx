@@ -267,7 +267,34 @@ const menuItems = [
   {
     text: "Управление БД",
     icon: <StorageIcon />,
-    path: "/admin-database",
+    path: "/admin",
+    subMenu: [
+      {
+        text: "Организации",
+        icon: <BusinessIcon />,
+        path: "/admin/organizations",
+      },
+      {
+        text: "Подразделения",
+        icon: <DomainAddIcon />,
+        path: "/admin/divisions",
+      },
+      {
+        text: "Должности",
+        icon: <WorkIcon />,
+        path: "/admin/positions",
+      },
+      {
+        text: "Сотрудники",
+        icon: <PeopleIcon />,
+        path: "/admin/staff",
+      },
+      {
+        text: "Функциональные связи",
+        icon: <SwapVertIcon />,
+        path: "/admin/functional-relations",
+      },
+    ],
   },
   {
     text: "Telegram-бот",
@@ -301,10 +328,21 @@ const MenuListItems: React.FC<MenuListItemsProps> = ({ isCollapsed = false }) =>
 
   // Проверка, является ли путь или любой из его подпутей активным
   const isPathActive = (path: string, subMenu?: any[]) => {
+    // Проверка точного совпадения пути
     if (location.pathname === path) return true;
+    
+    // Проверка для подменю
     if (subMenu && subMenu.some(item => location.pathname === item.path)) return true;
-    // Проверка для активных подпутей (e.g. /staff/profiles должен активировать /staff)
-    if (subMenu && location.pathname.startsWith(path + '/')) return true;
+    
+    // Проверка для активных подпутей (например, /staff/profiles должен активировать /staff)
+    if (location.pathname.startsWith(path + '/')) return true;
+    
+    // Специальная проверка для админ-секции
+    if (path === "/admin" && 
+        (location.pathname.startsWith("/admin/") || location.pathname === "/admin-database")) {
+      return true;
+    }
+    
     return false;
   };
 
