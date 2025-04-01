@@ -5,10 +5,10 @@ import CommentIcon from '@mui/icons-material/Comment';
 import { Comment } from './types';
 
 interface CustomNodeData {
-  label: string;
-  position?: string;
-  manager?: string;
-  avatar?: string;
+  label: string;      // Название сущности
+  position?: string;  // Должность
+  staff?: string;     // Сотрудник на должности (вместо manager)
+  avatar?: string;    // Аватар
   comments?: Comment[];
   activeComments: number;
   borderColor: string;
@@ -16,22 +16,22 @@ interface CustomNodeData {
 }
 
 const CustomNode: React.FC<NodeProps<CustomNodeData>> = ({ data, selected }) => {
-  const { label, position, manager, avatar, activeComments, borderColor, type } = data;
+  const { label, position, staff, avatar, activeComments, borderColor, type } = data;
   
   return (
     <Box
       sx={{
-        width: '280px',
-        padding: '12px',
-        backgroundColor: 'rgba(26, 26, 34, 0.9)',
-        borderRadius: '8px',
+        width: '240px',
+        padding: '10px 12px',
+        backgroundColor: 'rgba(18, 18, 24, 0.9)',
+        borderRadius: '6px',
         border: `2px solid ${borderColor}`,
         boxShadow: selected 
           ? `0 0 10px 2px ${borderColor}` 
           : '0 4px 12px rgba(0, 0, 0, 0.3)',
         transition: 'all 0.2s ease',
         '&:hover': {
-          backgroundColor: 'rgba(30, 30, 38, 0.95)',
+          backgroundColor: 'rgba(25, 25, 35, 0.95)',
           transform: 'translateY(-2px)',
           boxShadow: `0 6px 16px rgba(0, 0, 0, 0.4), 0 0 0 1px ${borderColor}`
         },
@@ -39,11 +39,12 @@ const CustomNode: React.FC<NodeProps<CustomNodeData>> = ({ data, selected }) => 
         display: 'flex',
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
         color: '#ffffff',
         cursor: 'pointer'
       }}
     >
-      {/* Коннекторы для входящих и исходящих связей - делаем больше для лучшего UX */}
+      {/* Коннекторы для входящих и исходящих связей */}
       <Handle
         type="target"
         position={Position.Top}
@@ -55,15 +56,15 @@ const CustomNode: React.FC<NodeProps<CustomNodeData>> = ({ data, selected }) => 
         style={{ background: borderColor, width: '12px', height: '12px', bottom: '-6px' }}
       />
       
-      {/* Аватар сотрудника (если есть) - добавляем отступ справа */}
-      <Box sx={{ mr: 2 }}>
+      {/* Аватар сотрудника (если есть) */}
+      <Box sx={{ mr: 2, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         {avatar ? (
           <Avatar
             src={avatar}
             alt={label}
             sx={{
-              width: 56,
-              height: 56,
+              width: 48,
+              height: 48,
               border: `2px solid ${borderColor}`,
               boxShadow: '0 0 8px rgba(0, 0, 0, 0.3)'
             }}
@@ -71,8 +72,8 @@ const CustomNode: React.FC<NodeProps<CustomNodeData>> = ({ data, selected }) => 
         ) : (
           <Avatar
             sx={{
-              width: 56,
-              height: 56,
+              width: 48,
+              height: 48,
               bgcolor: 'rgba(157, 106, 245, 0.7)',
               border: `2px solid ${borderColor}`,
               boxShadow: '0 0 8px rgba(0, 0, 0, 0.3)'
@@ -83,16 +84,29 @@ const CustomNode: React.FC<NodeProps<CustomNodeData>> = ({ data, selected }) => 
         )}
       </Box>
       
-      {/* Текстовая информация - справа от аватара */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
-        {/* Имя сотрудника */}
+      {/* Текстовая информация - выравнивание по центру вертикально */}
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        justifyContent: 'center',
+        alignItems: 'center',
+        flex: 1,
+        minHeight: '60px',
+        width: '100%'
+      }}>
+        {/* Название сущности */}
         <Typography
           variant="subtitle1"
-          fontWeight="bold"
+          fontWeight="500"
+          align="center"
           sx={{
             mb: 0.5,
             color: '#ffffff',
-            textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
+            fontSize: '0.9rem',
+            textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            width: '100%'
           }}
         >
           {label}
@@ -102,52 +116,65 @@ const CustomNode: React.FC<NodeProps<CustomNodeData>> = ({ data, selected }) => 
         {position && (
           <Typography
             variant="body2"
+            align="center"
             sx={{
-              mb: 0.5,
-              color: '#cccccc',
+              mb: position && staff ? 0.5 : 0,
+              color: '#d0d0d0',
               fontFamily: 'monospace',
+              fontWeight: 400,
+              fontSize: '0.75rem',
               backgroundColor: 'rgba(0, 0, 0, 0.2)',
               px: 1,
-              py: 0.5,
+              py: 0.3,
               borderRadius: '4px',
-              width: '100%'
+              width: '95%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
             }}
           >
             {position}
           </Typography>
         )}
         
-        {/* Руководитель */}
-        {manager && (
+        {/* Сотрудник на должности */}
+        {staff && (
           <Typography
             variant="caption"
             fontStyle="italic"
+            align="center"
             sx={{
-              color: '#aaaaaa'
+              color: '#aaaaaa',
+              fontSize: '0.7rem',
+              fontWeight: 400,
+              width: '95%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
             }}
           >
-            Руководитель: {manager}
+            {staff}
           </Typography>
         )}
       </Box>
       
-      {/* Индикатор комментариев - увеличиваем размер для лучшего клика */}
+      {/* Индикатор комментариев */}
       {activeComments > 0 && (
         <Badge
           badgeContent={activeComments}
           color="error"
           sx={{
             position: 'absolute',
-            top: '8px',
-            right: '8px',
+            top: '5px',
+            right: '5px',
             '& .MuiBadge-badge': {
-              fontSize: '0.8rem',
-              height: '22px',
-              minWidth: '22px'
+              fontSize: '0.7rem',
+              height: '18px',
+              minWidth: '18px'
             }
           }}
         >
-          <CommentIcon sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '1.4rem' }} />
+          <CommentIcon sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '1.2rem' }} />
         </Badge>
       )}
     </Box>

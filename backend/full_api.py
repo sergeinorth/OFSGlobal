@@ -3,6 +3,7 @@ import os
 import traceback  # Добавляем модуль для печати стека вызовов
 import logging    # Добавляем логирование
 from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi.middleware.cors import CORSMiddleware  # Импортируем CORS middleware
 from pydantic import BaseModel, EmailStr, Field
 from typing import List, Optional, Dict, Any, Union
 from enum import Enum
@@ -27,6 +28,15 @@ DB_PATH = "full_api_new.db"
 
 # Создаем приложение
 app = FastAPI(title="OFS Global API", description="Гибкое API для OFS Global", version="2.0.0")
+
+# Настройка CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Разрешаем все origins для разработки
+    allow_credentials=True,
+    allow_methods=["*"],  # Разрешаем все HTTP методы
+    allow_headers=["*"],  # Разрешаем все заголовки
+)
 
 # Добавляем middleware для глобальной обработки ошибок
 @app.middleware("http")
@@ -333,8 +343,14 @@ class VFP(VFPBase):
 
 # Функция для получения соединения с базой данных
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
+    """
+    Возвращает соединение с базой данных для текущего запроса.
+    SQLite не поддерживает многопоточность, поэтому устанавливаем check_same_thread=False
+    и включаем режим WAL для улучшения конкурентного доступа.
+    """
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row  # Это позволит получать данные как словари
+    conn.execute('PRAGMA journal_mode=WAL')  # Улучшает поддержку конкурентного доступа
     try:
         yield conn
     finally:

@@ -28,12 +28,25 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import PersonIcon from '@mui/icons-material/Person';
 import CommentIcon from '@mui/icons-material/Comment';
+import SaveAltIcon from '@mui/icons-material/SaveAlt';
 
 // Импортируем типы
 import { EntityType, RelationType, EntityNode, EntityRelation, Comment } from './types';
 
-// Импортируем кастомный компонент узла напрямую
+// Кастомный компонент узла (локальный импорт)
 import CustomNode from './CustomNode';
+
+// Тип данных для кастомного узла
+interface CustomNodeData {
+  label: string;
+  position?: string;
+  manager?: string;
+  avatar?: string;
+  comments?: Comment[];
+  activeComments: number;
+  borderColor: string;
+  type: string;
+}
 
 // Стилизованный контейнер для графа
 const GraphContainer = styled(Box)(({ theme }) => ({
@@ -165,7 +178,7 @@ const entityNodeToReactFlowNode = (node: EntityNode, allEdges: EntityRelation[])
     data: {
       label: node.name,
       position: node.position,
-      manager: node.manager,
+      staff: node.manager,
       avatar: node.avatar,
       comments: node.comments,
       activeComments,
@@ -177,20 +190,91 @@ const entityNodeToReactFlowNode = (node: EntityNode, allEdges: EntityRelation[])
 
 // Функция для преобразования EntityRelation в Edge для ReactFlow
 const entityRelationToReactFlowEdge = (relation: EntityRelation): Edge => {
+  const edgeColor = RELATION_COLORS[relation.type] || RELATION_COLORS.other;
+  const dashed = relation.type === 'functional';
+  
   return {
     id: relation.id,
     source: relation.from,
     target: relation.to,
     type: 'smoothstep',
     animated: relation.type === 'functional',
-    style: { stroke: RELATION_COLORS[relation.type] || RELATION_COLORS.other, strokeWidth: 2 },
+    style: { 
+      stroke: edgeColor, 
+      strokeWidth: 2,
+      strokeDasharray: dashed ? '5 5' : undefined 
+    },
     markerEnd: {
       type: MarkerType.ArrowClosed,
-      color: RELATION_COLORS[relation.type] || RELATION_COLORS.other,
+      width: 15,
+      height: 15,
+      color: edgeColor,
     },
     label: relation.label,
+    labelStyle: { 
+      fill: '#fff', 
+      fontWeight: 500, 
+      fontSize: 10,
+      filter: 'drop-shadow(0px 0px 1px rgba(0,0,0,0.7))'
+    },
+    labelBgStyle: { 
+      fill: 'rgba(0,0,0,0.5)', 
+      fillOpacity: 0.7,
+      rx: 4
+    },
     data: { type: relation.type }
   };
+};
+
+// Реализация для экспорта графа как изображение
+const exportGraphAsImage = async (reactFlowInstance: any) => {
+  try {
+    // Загружаем библиотеку html2canvas динамически
+    const html2canvas = await import('html2canvas');
+    
+    // Получаем DOM-элемент с графом
+    const nodesBounds = reactFlowInstance.getNodes().reduce(
+      (bounds: any, node: Node) => {
+        const nodeBounds = {
+          x: node.position.x,
+          y: node.position.y,
+          width: 250, // приблизительная ширина узла
+          height: 100, // приблизительная высота узла
+        };
+        
+        bounds.left = Math.min(bounds.left, nodeBounds.x);
+        bounds.top = Math.min(bounds.top, nodeBounds.y);
+        bounds.right = Math.max(bounds.right, nodeBounds.x + nodeBounds.width);
+        bounds.bottom = Math.max(bounds.bottom, nodeBounds.y + nodeBounds.height);
+        
+        return bounds;
+      },
+      { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity }
+    );
+    
+    // Получаем viewport
+    const { x, y, zoom } = reactFlowInstance.getViewport();
+    
+    // Экспортируем изображение
+    const flowElement = document.querySelector('.react-flow');
+    if (flowElement) {
+      const canvas = await html2canvas.default(flowElement as HTMLElement);
+      const dataUrl = canvas.toDataURL('image/png');
+      
+      // Создаем ссылку для скачивания
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = 'organization-chart.png';
+      a.click();
+    }
+  } catch (error) {
+    console.error('Ошибка при экспорте графа:', error);
+  }
+};
+
+// Кастомные типы узлов - ВЫНЕСЕНЫ ЗА ПРЕДЕЛЫ КОМПОНЕНТА
+const nodeTypes: NodeTypes = {
+  customNode: CustomNode,
 };
 
 const ReactFlowGraph: React.FC<ReactFlowGraphProps> = ({
@@ -224,11 +308,6 @@ const ReactFlowGraph: React.FC<ReactFlowGraphProps> = ({
   const [newComment, setNewComment] = useState('');
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const reactFlowInstance = useReactFlow();
-
-  // Регистрируем кастомные типы узлов
-  const nodeTypes: NodeTypes = {
-    customNode: CustomNode,
-  };
 
   // Инициализация графа при изменении входных данных
   useEffect(() => {
@@ -447,62 +526,84 @@ const ReactFlowGraph: React.FC<ReactFlowGraphProps> = ({
           <CircularProgress color="secondary" />
         </Box>
       ) : (
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={handleNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          nodeTypes={nodeTypes}
-          onNodeClick={onNodeClick}
-          onNodeDoubleClick={onNodeDoubleClick}
-          fitView
-          snapToGrid
-          snapGrid={[15, 15]}
-          defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-          onPaneClick={onPaneClick}
-          zoomOnDoubleClick={false}
-          connectionLineType={ConnectionLineType.SmoothStep}
-          connectionLineStyle={{ stroke: '#9D6AF5', strokeWidth: 2 }}
-          defaultEdgeOptions={{ 
-            type: 'smoothstep',
-            markerEnd: { type: MarkerType.ArrowClosed }, 
-            style: { stroke: '#9D6AF5', strokeWidth: 2 }
-          }}
-        >
-          <Background color="#1a1a1e" gap={20} />
-          <Controls 
-            showInteractive={false} 
-            position="bottom-right"
-            style={{ 
-              display: 'flex', 
-              flexDirection: 'column',
-              background: 'rgba(26, 26, 34, 0.9)',
-              borderRadius: '8px',
-              border: '1px solid rgba(157, 106, 245, 0.3)',
-              padding: '8px' 
-            }}
-          />
-          
-          {!readOnly && (
-            <Panel position="top-right">
-              <Fab
-                color="secondary"
-                size="medium"
-                onClick={handleAddNodeBtnClick}
-                sx={{
-                  background: 'linear-gradient(45deg, #9D6AF5, #b350ff)',
-                  boxShadow: '0 4px 10px rgba(157, 106, 245, 0.5)',
-                  '&:hover': {
-                    background: 'linear-gradient(45deg, #a478f5, #c070ff)'
-                  }
+        <>
+          {/* Основной граф */}
+          <Box sx={{ height: '100%' }}>
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={handleNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              nodeTypes={nodeTypes}
+              onNodeClick={onNodeClick}
+              onNodeDoubleClick={onNodeDoubleClick}
+              fitView
+              snapToGrid
+              snapGrid={[15, 15]}
+              defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+              onPaneClick={onPaneClick}
+              zoomOnDoubleClick={false}
+              connectionLineType={ConnectionLineType.SmoothStep}
+              connectionLineStyle={{ stroke: '#9D6AF5', strokeWidth: 2 }}
+              defaultEdgeOptions={{ 
+                type: 'smoothstep',
+                markerEnd: { type: MarkerType.ArrowClosed }, 
+                style: { stroke: '#9D6AF5', strokeWidth: 2 }
+              }}
+            >
+              <Background color="#1a1a1e" gap={20} />
+              <Controls 
+                showInteractive={false} 
+                position="bottom-right"
+                style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  background: 'rgba(26, 26, 34, 0.9)',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(157, 106, 245, 0.3)',
+                  padding: '8px' 
                 }}
-              >
-                <AddIcon />
-              </Fab>
-            </Panel>
-          )}
-        </ReactFlow>
+              />
+              
+              {!readOnly && (
+                <Panel position="top-right" style={{ display: 'flex', gap: '10px' }}>
+                  <Fab
+                    color="secondary"
+                    size="medium"
+                    onClick={handleAddNodeBtnClick}
+                    title="Добавить узел"
+                    sx={{
+                      background: 'linear-gradient(45deg, #9D6AF5, #b350ff)',
+                      boxShadow: '0 4px 10px rgba(157, 106, 245, 0.5)',
+                      '&:hover': {
+                        background: 'linear-gradient(45deg, #a478f5, #c070ff)'
+                      }
+                    }}
+                  >
+                    <AddIcon />
+                  </Fab>
+                  
+                  <Fab
+                    color="primary"
+                    size="medium"
+                    onClick={() => exportGraphAsImage(reactFlowInstance)}
+                    title="Экспортировать как изображение"
+                    sx={{
+                      background: 'linear-gradient(45deg, #3a8af5, #50a0ff)',
+                      boxShadow: '0 4px 10px rgba(58, 138, 245, 0.5)',
+                      '&:hover': {
+                        background: 'linear-gradient(45deg, #4a95f5, #60b0ff)'
+                      }
+                    }}
+                  >
+                    <SaveAltIcon />
+                  </Fab>
+                </Panel>
+              )}
+            </ReactFlow>
+          </Box>
+        </>
       )}
       
       {/* Диалог редактирования узла */}

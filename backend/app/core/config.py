@@ -35,38 +35,13 @@ class Settings(BaseSettings):
             return None
         return v
 
-    POSTGRES_SERVER: str = "localhost"
-    POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "QAZwsxr$t5"
-    POSTGRES_DB: str = "ofs_db_new"
-    SQLALCHEMY_DATABASE_URI: Optional[str] = None
-
-    @field_validator("SQLALCHEMY_DATABASE_URI", mode='before')
-    def assemble_db_connection(cls, v: Optional[str], info) -> str:
-        if isinstance(v, str):
-            return v
-
-        # Формируем URL вручную для большего контроля
-        values = info.data
-        user = values.get("POSTGRES_USER", "")
-        password = values.get("POSTGRES_PASSWORD", "")
-        host = values.get("POSTGRES_SERVER", "localhost")
-        db = values.get("POSTGRES_DB", "")
-
-        # Собираем URL для асинхронного подключения без параметра client_encoding в URL
-        # Настройка кодировки установлена через connect_args в session.py
-        return f"postgresql+asyncpg://{user}:{password}@{host}/{db}"
+    # Настройки SQLite вместо PostgreSQL
+    SQLALCHEMY_DATABASE_URI: Optional[str] = "sqlite:///./ofs_app.db"
 
     @property
     def SYNC_SQLALCHEMY_DATABASE_URI(self) -> str:
         """Возвращает URL для синхронного подключения к базе данных"""
-        user = self.POSTGRES_USER
-        password = quote_plus(self.POSTGRES_PASSWORD)
-        host = self.POSTGRES_SERVER
-        db = self.POSTGRES_DB
-        # Убираем параметр client_encoding из URL, так как он может вызывать проблемы
-        # в зависимости от используемого драйвера
-        return f"postgresql://{user}:{password}@{host}/{db}"
+        return "sqlite:///./ofs_app.db"
 
     SMTP_TLS: bool = True
     SMTP_PORT: Optional[int] = None

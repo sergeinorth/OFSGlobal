@@ -15,7 +15,7 @@ interface ImportMeta {
 }
 
 // API URL для работы с бэкендом
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // Настройки загрузки файлов
 export const UPLOAD_MAX_SIZE = 5 * 1024 * 1024; // 5MB

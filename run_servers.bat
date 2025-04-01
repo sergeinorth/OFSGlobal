@@ -13,8 +13,8 @@ echo [ИНФО] Останавливаем предыдущие процессы
 taskkill /F /IM python.exe /T >nul 2>nul
 taskkill /F /IM node.exe /T >nul 2>nul
 
-:: Запускаем бэкенд (full_api)
-echo [ИНФО] Запуск бэкенда (full_api)...
+:: Запускаем бэкенд (app.main)
+echo [ИНФО] Запуск бэкенда (app.main:app)...
 echo [ИНФО] Директория: %BASE_DIR%\backend
 
 :: Переходим в директорию backend
@@ -37,7 +37,7 @@ if exist "%BASE_DIR%\.venv\Scripts\python.exe" (
 )
 
 :: Запускаем бэкенд в отдельном окне
-start "OFS Бэкенд (full_api)" cmd /c "%PYTHON_CMD% -m uvicorn full_api:app --host 127.0.0.1 --port 8000 --reload"
+start "OFS Бэкенд (full_api)" cmd /c "cd %BASE_DIR%\backend && %PYTHON_CMD% -m uvicorn full_api:app --host 127.0.0.1 --port 8000 --reload"
 
 :: Ждем пару секунд
 echo [ИНФО] Ожидание запуска бэкенда (3 секунды)...

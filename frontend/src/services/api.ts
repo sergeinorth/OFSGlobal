@@ -8,8 +8,8 @@ const api = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   },
-  // Важно для CORS
-  withCredentials: true
+  // Отключаем для тестирования
+  withCredentials: false
 });
 
 // Перехватчик для обработки ошибок

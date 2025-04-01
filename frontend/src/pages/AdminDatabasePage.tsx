@@ -38,6 +38,7 @@ import {
   Cancel as CancelIcon
 } from '@mui/icons-material';
 import api from '../services/api';
+import { API_URL } from '../config';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -111,7 +112,9 @@ const AdminDatabasePage: React.FC = () => {
     setCurrentTable(tableName);
     
     try {
+      console.log(`Отправляем запрос к: ${API_URL}/${tableName}/`);
       const response = await api.get(`/${tableName}/`);
+      console.log('Ответ сервера:', response);
       
       switch (tableName) {
         case 'organizations':
@@ -131,6 +134,7 @@ const AdminDatabasePage: React.FC = () => {
           break;
       }
     } catch (err) {
+      console.error('Ошибка при запросе:', err);
       setError('Ошибка при загрузке данных: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setLoading(false);

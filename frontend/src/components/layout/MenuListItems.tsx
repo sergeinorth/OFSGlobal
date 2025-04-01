@@ -33,6 +33,7 @@ import {
   EmojiEvents as EmojiEventsIcon,
   AssignmentInd as AssignmentIndIcon,
   School as SchoolIcon,
+  Storage as StorageIcon,
 } from '@mui/icons-material';
 
 // Стилизованный ListItemButton в стиле Cryptonite
@@ -262,6 +263,11 @@ const menuItems = [
     text: "Функциональные связи",
     icon: <SwapVertIcon />,
     path: "/functional-relations",
+  },
+  {
+    text: "Управление БД",
+    icon: <StorageIcon />,
+    path: "/admin-database",
   },
   {
     text: "Telegram-бот",

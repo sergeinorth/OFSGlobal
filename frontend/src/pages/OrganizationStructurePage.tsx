@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Container, Paper, Fade, CircularProgress, styled } from '@mui/material';
 import { ReactFlowProvider } from 'reactflow';
 import OrganizationTree from '../components/organization/OrganizationTree';
 import OrgTreeControls from '../components/organization/OrgTreeControls';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { EntityNode, EntityRelation } from '../components/organization/types';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { EntityNode, EntityRelation, RelationType } from '../components/organization/types';
 import ReactFlowGraph from '../components/organization/ReactFlowGraph';
+import organizationService from '../services/organizationService';
 
 // Стилизованные компоненты
 const PageContainer = styled(Container)(({ theme }) => ({
@@ -58,6 +59,7 @@ const ControlsContainer = styled(Box)(({ theme }) => ({
 }));
 
 // Временные моковые данные для наших графов
+/*
 const mockNodes: Record<string, EntityNode[]> = {
   business: [
     { id: '1', name: 'Генеральный директор', type: 'business', position: 'CEO' },
@@ -84,6 +86,7 @@ const mockNodes: Record<string, EntityNode[]> = {
     { id: 't5', name: 'Региональный директор', type: 'territorial', position: 'Директор СПб филиала' },
   ],
 };
+*/
 
 const mockEdges: Record<string, EntityRelation[]> = {
   business: [
@@ -111,56 +114,140 @@ const mockEdges: Record<string, EntityRelation[]> = {
 };
 
 const OrganizationStructurePage: React.FC = () => {
-  // Используем location и navigate для работы с URL
-  const location = useLocation();
+  const { type = 'business' } = useParams<{ type?: 'business' | 'legal' | 'territorial' }>();
   const navigate = useNavigate();
   
-  // Извлекаем viewMode из URL
-  const getViewModeFromPath = (): 'business' | 'legal' | 'territorial' => {
-    const path = location.pathname;
-    if (path.includes('/legal')) return 'legal';
-    if (path.includes('/territorial')) return 'territorial';
-    return 'business'; // По умолчанию
-  };
-
-  const [viewMode, setViewMode] = useState<'business' | 'legal' | 'territorial'>(getViewModeFromPath());
+  const [loading, setLoading] = useState(true);
+  const [nodes, setNodes] = useState<EntityNode[]>([]);
+  const [edges, setEdges] = useState<EntityRelation[]>([]);
+  const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [displayMode, setDisplayMode] = useState<'tree' | 'list'>('tree');
-  const [loading, setLoading] = useState(false);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-
-  // Эффект для синхронизации viewMode с URL
+  
+  // Загрузка данных при изменении типа структуры
   useEffect(() => {
-    const currentMode = getViewModeFromPath();
-    if (currentMode !== viewMode) {
-      setViewMode(currentMode);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        let result;
+        switch (type) {
+          case 'business':
+            result = await organizationService.getBusinessStructure();
+            break;
+          case 'legal':
+            result = await organizationService.getLegalStructure();
+            break;
+          case 'territorial':
+            result = await organizationService.getTerritorialStructure();
+            break;
+          default:
+            result = { nodes: [], edges: [] };
+        }
+        
+        setNodes(result.nodes);
+        setEdges(result.edges);
+      } catch (error) {
+        console.error('Ошибка при загрузке данных:', error);
+        // При ошибке используем пустые массивы
+        setNodes([]);
+        setEdges([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [type]);
+  
+  // Обработчики для работы с узлами и связями
+  const handleNodeSelect = useCallback((nodeId: string | null) => {
+    setSelectedNode(nodeId);
+  }, []);
+  
+  const handleNodeAdd = useCallback(async (position: { x: number, y: number }) => {
+    try {
+      // Создаем базовый узел в зависимости от типа структуры
+      const newNode: EntityNode = {
+        id: `temp_${Date.now()}`, // Временный ID
+        name: 'Новый элемент',
+        type: type,
+        position: type === 'territorial' ? 'Новая локация' : 'Новая должность'
+      };
+      
+      // Добавляем узел через API
+      const addedNode = await organizationService.addNode(newNode);
+      
+      // Обновляем состояние - учитываем что position в EntityNode это строка
+      setNodes(prev => [...prev, { 
+        ...addedNode,
+        // position уже определен в addedNode как строка
+      }]);
+    } catch (error) {
+      console.error('Ошибка при добавлении узла:', error);
     }
-  }, [location.pathname]);
-
-  // Функция для изменения режима просмотра, обновляет также URL
-  const handleViewModeChange = (mode: 'business' | 'legal' | 'territorial') => {
-    setLoading(true);
-    setViewMode(mode);
-    
-    // Обновляем URL в соответствии с выбранным режимом
-    const basePath = '/organization-structure';
-    const newPath = mode === 'business' 
-      ? `${basePath}/business`
-      : mode === 'legal' 
-        ? `${basePath}/legal` 
-        : `${basePath}/territorial`;
-    
-    navigate(newPath);
-    
-    // Имитируем загрузку данных
-    setTimeout(() => {
-      setLoading(false);
-    }, 800);
+  }, [type]);
+  
+  const handleNodeDelete = useCallback(async (nodeId: string) => {
+    try {
+      // Удаляем узел через API
+      await organizationService.deleteNode(nodeId);
+      
+      // Обновляем состояние
+      setNodes(prev => prev.filter(node => node.id !== nodeId));
+      setEdges(prev => prev.filter(edge => edge.from !== nodeId && edge.to !== nodeId));
+    } catch (error) {
+      console.error('Ошибка при удалении узла:', error);
+    }
+  }, []);
+  
+  const handleNodeUpdate = useCallback(async (updatedNode: EntityNode) => {
+    try {
+      // Обновляем узел через API
+      await organizationService.updateNode(updatedNode);
+      
+      // Обновляем состояние
+      setNodes(prev => prev.map(node => 
+        node.id === updatedNode.id ? updatedNode : node
+      ));
+    } catch (error) {
+      console.error('Ошибка при обновлении узла:', error);
+    }
+  }, []);
+  
+  const handleEdgeAdd = useCallback(async (edge: { from: string, to: string, type: RelationType }) => {
+    try {
+      // Добавляем связь через API
+      const addedEdge = await organizationService.addEdge(edge);
+      
+      // Обновляем состояние
+      setEdges(prev => [...prev, addedEdge]);
+    } catch (error) {
+      console.error('Ошибка при добавлении связи:', error);
+    }
+  }, []);
+  
+  const handleEdgeDelete = useCallback(async (edgeId: string) => {
+    try {
+      // Удаляем связь через API
+      await organizationService.deleteEdge(edgeId);
+      
+      // Обновляем состояние
+      setEdges(prev => prev.filter(edge => edge.id !== edgeId));
+    } catch (error) {
+      console.error('Ошибка при удалении связи:', error);
+    }
+  }, []);
+  
+  // Обработчик изменения типа структуры
+  const handleTypeChange = (event: React.SyntheticEvent, newType: 'business' | 'legal' | 'territorial') => {
+    if (newType) {
+      navigate(`/organization-structure/${newType}`);
+    }
   };
 
-  // Обработчик выбора узла
-  const handleNodeSelect = (nodeId: string | null) => {
-    setSelectedNodeId(nodeId);
-    console.log(`Выбран узел: ${nodeId}`);
+  // Обработчик изменения режима отображения
+  const handleDisplayModeChange = (mode: 'tree' | 'list') => {
+    setDisplayMode(mode);
   };
 
   return (
@@ -169,7 +256,7 @@ const OrganizationStructurePage: React.FC = () => {
         {/* Переключатель дерево/список теперь слева */}
         <OrgTreeControls
           displayMode={displayMode}
-          onDisplayModeChange={setDisplayMode}
+          onDisplayModeChange={handleDisplayModeChange}
         />
         {/* Пустое пространство справа */}
       </ControlsContainer>
@@ -180,19 +267,30 @@ const OrganizationStructurePage: React.FC = () => {
             {/* Используем новый компонент с ReactFlow */}
             {displayMode === 'tree' ? (
               <ReactFlowProvider>
-                <ReactFlowGraph
-                  type={viewMode}
-                  nodes={mockNodes[viewMode]}
-                  edges={mockEdges[viewMode]}
-                  selectedNodeId={selectedNodeId || undefined}
-                  onNodeSelect={handleNodeSelect}
-                  height={700}
-                />
+                {loading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 200px)' }}>
+                    <CircularProgress color="secondary" />
+                  </Box>
+                ) : (
+                  <ReactFlowGraph
+                    type={type}
+                    nodes={nodes}
+                    edges={edges}
+                    selectedNodeId={selectedNode}
+                    onNodeSelect={handleNodeSelect}
+                    onNodeAdd={handleNodeAdd}
+                    onNodeDelete={handleNodeDelete}
+                    onNodeUpdate={handleNodeUpdate}
+                    onEdgeAdd={handleEdgeAdd}
+                    onEdgeDelete={handleEdgeDelete}
+                    height="calc(100vh - 200px)"
+                  />
+                )}
               </ReactFlowProvider>
             ) : (
               <OrganizationTree
                 organizationId="1"
-                viewMode={viewMode}
+                viewMode={type}
                 displayMode={displayMode}
                 zoomLevel={100}
                 detailLevel={1}
