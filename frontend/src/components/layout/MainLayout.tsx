@@ -1,356 +1,184 @@
 import React, { useState } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, Outlet } from 'react-router-dom';
 import {
-  AppBar,
   Box,
   CssBaseline,
-  Divider,
-  Drawer,
   IconButton,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Toolbar,
-  Typography,
-  Button,
-  Avatar,
-  Badge
+  Tooltip,
 } from '@mui/material';
-import {
-  Menu as MenuIcon,
-  AccountTree as AccountTreeIcon,
-  People as PeopleIcon,
-  Business as BusinessIcon,
-  Settings as SettingsIcon,
-  Logout as LogoutIcon,
-  Dashboard as DashboardIcon,
-  SwapVert as SwapVertIcon,
-  Work as WorkIcon,
-  DomainAdd as DomainAddIcon,
-  Telegram as TelegramIcon,
-  LocationOn as LocationIcon,
-  ViewInAr as ViewInArIcon,
-  Visibility as VisibilityIcon,
-  Storage as StorageIcon
-} from '@mui/icons-material';
-import './MainLayout.css';
+import { styled } from '@mui/material/styles';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import TopBar from './TopBar';
+import MenuListItems from './MenuListItems';
 
-const drawerWidth = 240;
+// Стилизованные компоненты в стиле Cryptonite
+const SidebarContainer = styled(Box)<{ isCollapsed: boolean }>(({ theme, isCollapsed }) => ({
+  width: isCollapsed ? 80 : 280,
+  backgroundColor: '#1A1A20', // Темный фон как на скриншоте Cryptonite
+  position: 'relative',
+  overflowY: 'auto',
+  display: 'flex',
+  flexDirection: 'column',
+  transition: 'width 0.3s ease-in-out',
+  zIndex: 10, // Добавлено: обеспечивает, что сайдбар всегда будет поверх контента
+  '&::after': {
+    content: '""',
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: '1px',
+    background: 'linear-gradient(to bottom, transparent, rgba(157, 106, 245, 0.3), transparent)',
+    opacity: 0.8,
+  },
+  '&::-webkit-scrollbar': {
+    width: '4px',
+  },
+  '&::-webkit-scrollbar-track': {
+    background: 'rgba(0,0,0,0.2)',
+  },
+  '&::-webkit-scrollbar-thumb': {
+    background: 'rgba(157, 106, 245, 0.5)',
+    borderRadius: '2px',
+  },
+  '&::-webkit-scrollbar-thumb:hover': {
+    background: 'rgba(157, 106, 245, 0.7)',
+    boxShadow: '0 0 6px rgba(157, 106, 245, 0.5)',
+  },
+}));
 
-// Пункты основного меню
-const menuItems = [
-  {
-    text: "Дашборд",
-    icon: <DashboardIcon />,
-    path: "/dashboard",
+const Logo = styled('img')<{ isCollapsed?: boolean }>(({ isCollapsed }) => ({
+  height: isCollapsed ? '35px' : '40px',
+  width: isCollapsed ? '35px' : 'auto',
+  margin: isCollapsed ? '25px auto 20px' : '25px auto 30px',
+  display: 'block',
+  cursor: 'pointer',
+  transition: 'all 0.3s ease',
+  objectFit: isCollapsed ? 'contain' : 'unset',
+  filter: 'drop-shadow(0 0 5px rgba(157, 106, 245, 0.3))',
+  '&:hover': {
+    transform: 'scale(1.05)',
+    filter: 'drop-shadow(0 0 8px rgba(157, 106, 245, 0.5))',
   },
-  {
-    text: "Организационная структура",
-    icon: <AccountTreeIcon />,
-    path: "/organization-structure",
-  },
-  {
-    text: "Визуализация структуры",
-    icon: <ViewInArIcon />,
-    path: "/organization-visualization",
-  },
-  {
-    text: "Отделы",
-    icon: <DomainAddIcon />,
-    path: "/divisions",
-  },
-  {
-    text: "Локации",
-    icon: <LocationIcon />,
-    path: "/organizations",
-  },
-  {
-    text: "Должности",
-    icon: <WorkIcon />,
-    path: "/positions",
-  },
-  {
-    text: "Сотрудники",
-    icon: <PeopleIcon />,
-    path: "/staff",
-  },
-  {
-    text: "Функциональные связи",
-    icon: <SwapVertIcon />,
-    path: "/functional-relations",
-  },
-  {
-    text: "Telegram-бот",
-    icon: <TelegramIcon />,
-    path: "/telegram-bot",
-    badge: 5, // Количество новых запросов, в реальном приложении будет динамически загружаться
-  },
-];
+}));
 
-// Функция для проверки прав суперадмина (временная, позже заменить на реальную проверку)
-const isSuperAdmin = () => {
-  // В реальном приложении здесь будет проверка из хранилища или из контекста аутентификации
-  return true; // Для демонстрации всегда возвращаем true
-};
+const MainContainer = styled(Box)(({ theme }) => ({
+  flex: 1,
+  padding: theme.spacing(3),
+  backgroundColor: '#121215',
+  overflow: 'auto',
+  position: 'relative',
+  marginTop: 0, // Нет необходимости в отступе, так как верхняя панель не занимает места
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'radial-gradient(circle at 10% 10%, rgba(20, 20, 35, 0.9) 0%, rgba(10, 10, 18, 0.95) 100%)',
+    zIndex: -2,
+  },
+  '&::-webkit-scrollbar': {
+    width: '6px',
+  },
+  '&::-webkit-scrollbar-track': {
+    background: 'rgba(0,0,0,0.2)',
+  },
+  '&::-webkit-scrollbar-thumb': {
+    background: 'rgba(157, 106, 245, 0.5)',
+    borderRadius: '3px',
+  },
+  '&::-webkit-scrollbar-thumb:hover': {
+    background: 'rgba(157, 106, 245, 0.7)',
+    boxShadow: '0 0 6px rgba(157, 106, 245, 0.5)',
+  },
+}));
 
-// Пункты нижнего меню
-const bottomMenuItems = [
-  { name: 'Настройки', path: '/settings', icon: <SettingsIcon /> },
-  { name: 'Выход', path: '/logout', icon: <LogoutIcon /> }
-];
+const ToggleButton = styled(IconButton)(({ theme }) => ({
+  position: 'absolute',
+  right: -12,
+  top: '50%',
+  transform: 'translateY(-50%)',
+  zIndex: 1000, // Большое значение z-index, чтобы кнопка была всегда поверх
+  backgroundColor: 'rgba(32, 32, 36, 0.95)',
+  border: '1px solid rgba(157, 106, 245, 0.6)',
+  color: '#9D6AF5',
+  width: 24,
+  height: 24,
+  padding: 0,
+  transition: 'all 0.3s ease',
+  boxShadow: '0 0 5px rgba(157, 106, 245, 0.5)',
+  '&:hover': {
+    backgroundColor: 'rgba(40, 40, 48, 0.95)',
+    transform: 'translateY(-50%) scale(1.1)',
+    boxShadow: '0 0 10px rgba(157, 106, 245, 0.7)',
+  },
+  '& .MuiSvgIcon-root': {
+    fontSize: '1rem',
+    filter: 'drop-shadow(0 0 3px rgba(157, 106, 245, 0.9))',
+  },
+}));
 
-// Пункты меню администратора (видны только суперадмину)
-const adminMenuItems = [
-  { name: 'База данных', path: '/admin-database', icon: <StorageIcon />, requireSuperAdmin: true }
-];
-
-interface MenuListItemsProps {
-  onItemClick: (path: string) => void;
+interface MainLayoutProps {
+  children: React.ReactNode;
 }
 
-const MenuListItems: React.FC<MenuListItemsProps> = ({ onItemClick }) => {
+interface LogoProps {
+  isCollapsed?: boolean;
+  src: string;
+  alt: string;
+  onClick: () => void;
+}
+
+const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
-  const location = useLocation();
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const toggleSidebar = () => {
+    setIsCollapsed(!isCollapsed);
+  };
 
   return (
-    <List>
-      {menuItems.map((item) => (
-        <ListItem 
-          key={item.path} 
-          disablePadding
-          sx={{ display: 'block' }}
-          onClick={() => {
-            navigate(item.path);
-            if (onItemClick) onItemClick(item.path);
-          }}
-        >
-          <ListItemButton
-            selected={location.pathname === item.path}
-            sx={{
-              minHeight: 48,
-              justifyContent: 'initial',
-              px: 2.5,
-            }}
-          >
-            <ListItemIcon
-              sx={{
-                minWidth: 0,
-                mr: 2,
-                justifyContent: 'center',
-              }}
-            >
-              {item.badge ? (
-                <Badge badgeContent={item.badge} color="error">
-                  {item.icon}
-                </Badge>
-              ) : (
-                item.icon
-              )}
-            </ListItemIcon>
-            <ListItemText primary={item.text} />
-          </ListItemButton>
-        </ListItem>
-      ))}
-    </List>
-  );
-};
-
-const MainLayout: React.FC = () => {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
-  
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
-  };
-  
-  const handleMenuClick = (path: string) => {
-    navigate(path);
-    setMobileOpen(false);
-  };
-  
-  // Определение активного пункта меню
-  const isActiveItem = (path: string) => {
-    return location.pathname === path;
-  };
-  
-  // Содержимое бокового меню
-  const drawer = (
-    <div>
-      <Toolbar className="drawer-header">
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-          <Avatar 
-            src="/images/ofs_logo.png" 
-            alt="OFS Global" 
-            className="drawer-logo"
-            sx={{ 
-              width: 80, 
-              height: 80,
-              marginBottom: 1,
-              backgroundColor: 'transparent'
-            }} 
-          />
-          <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold' }}>
-            OFS Global
-          </Typography>
-        </Box>
-      </Toolbar>
-      <Divider />
-      <MenuListItems onItemClick={handleMenuClick} />
-      <Divider />
-      {/* Меню администратора (только для суперадмина) */}
-      {isSuperAdmin() && (
-        <>
-          <List>
-            {adminMenuItems.map((item) => (
-              <ListItem key={item.name} disablePadding>
-                <ListItemButton 
-                  onClick={() => handleMenuClick(item.path)}
-                  selected={location.pathname === item.path}
-                  sx={{
-                    backgroundColor: location.pathname === item.path ? '#f0f4f9' : 'transparent',
-                    '&:hover': {
-                      backgroundColor: '#e3f2fd',
-                    },
-                  }}
-                >
-                  <ListItemIcon>{item.icon}</ListItemIcon>
-                  <ListItemText 
-                    primary={item.name} 
-                    sx={{ 
-                      color: '#d32f2f',
-                      fontWeight: 'bold'
-                    }}
-                  />
-                </ListItemButton>
-              </ListItem>
-            ))}
-          </List>
-          <Divider />
-        </>
-      )}
-      <List className="bottom-menu">
-        {bottomMenuItems.map((item) => (
-          <ListItem key={item.name} disablePadding>
-            <ListItemButton onClick={() => handleMenuClick(item.path)}>
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.name} />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
-    </div>
-  );
-  
-  return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', height: '100vh' }}>
       <CssBaseline />
-      {/* Брендовая полоса вверху сайта */}
-      <Box className="brand-header"></Box>
-      <AppBar
-        position="fixed"
-        sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-          borderBottom: '1px solid rgba(0,0,0,0.12)',
-          boxShadow: 'none',
-        }}
-      >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
-            <Avatar 
-              src="/images/ofs_logo.png" 
-              alt="OFS Global"
-              sx={{ 
-                width: 48, 
-                height: 48, 
-                marginRight: 2,
-                backgroundColor: 'transparent' 
-              }}
-            />
-          </Box>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
-            {/* Заголовок текущей страницы */}
-            {menuItems.find(item => isActiveItem(item.path))?.text || 'OFS Global'}
-          </Typography>
-          <Button color="inherit">
-            Профиль
-          </Button>
-        </Toolbar>
-      </AppBar>
-      <Box
-        component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
-        aria-label="mailbox folders"
-      >
-        {/* Мобильная версия ящика */}
-        <Drawer
-          variant="temporary"
-          open={mobileOpen}
-          onClose={handleDrawerToggle}
-          ModalProps={{
-            keepMounted: true, // Лучшая производительность на мобильных устройствах
-          }}
-          sx={{
-            display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
-          }}
-        >
-          {drawer}
-        </Drawer>
-        {/* Постоянная версия ящика */}
-        <Drawer
-          variant="permanent"
-          sx={{
-            display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
-          }}
-          open
-        >
-          {drawer}
-        </Drawer>
-      </Box>
-      <Box
-        component="main"
-        sx={{ 
-          flexGrow: 1, 
-          p: 0, 
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          position: 'relative',
-          '&::after': {
-            content: '""',
-            position: 'fixed',
-            bottom: 20,
-            right: 20,
-            width: 180,
-            height: 180,
-            backgroundImage: 'url("/images/ofs_logo.png")',
-            backgroundSize: 'contain',
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'center',
-            opacity: 0.05,
-            pointerEvents: 'none',
-            zIndex: 0
-          }
-        }}
-      >
-        <Toolbar />
-        {/* Содержимое страницы будет отображаться здесь через Outlet */}
-        <Outlet />
+      
+      {/* Боковое меню */}
+      <SidebarContainer isCollapsed={isCollapsed}>
+        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+          <Logo
+            isCollapsed={isCollapsed}
+            src={isCollapsed ? "/images/logo-icon.png" : "/images/Logo_NEW2.png"}
+            alt="Photomatrix"
+            onClick={() => navigate('/')}
+          />
+        </Box>
+        
+        {/* Используем компонент MenuListItems */}
+        <MenuListItems isCollapsed={isCollapsed} />
+        
+        {/* Кнопка переключения вынесена за пределы Box, чтобы не мешать логотипу */}
+        <Tooltip title={isCollapsed ? "Развернуть меню" : "Свернуть меню"} placement="right">
+          <ToggleButton onClick={toggleSidebar} aria-label="toggle sidebar">
+            {isCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+          </ToggleButton>
+        </Tooltip>
+      </SidebarContainer>
+      
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+        {/* Верхняя панель теперь абсолютно позиционирована и не занимает места в потоке */}
+        <TopBar />
+        
+        {/* Основной контент занимает все доступное пространство */}
+        <MainContainer>
+          {/* Используем Outlet из react-router для рендеринга вложенных маршрутов */}
+          <Outlet />
+          {children}
+        </MainContainer>
       </Box>
     </Box>
   );
 };
 
-export default MainLayout; 
+export default MainLayout;

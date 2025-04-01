@@ -160,7 +160,7 @@ const OrganizationStructure: React.FC<OrganizationStructureProps> = ({ type }) =
 
   // Рендерим граф организационной структуры
   return (
-    <Box sx={{ width: '100%', height: '100%', position: 'relative' }}>
+    <Box sx={{ width: '100%', height: 'calc(100vh - 150px)', position: 'relative' }}>
       {loading ? (
         <Box display="flex" justifyContent="center" alignItems="center" height="100%">
           <CircularProgress />
@@ -178,7 +178,7 @@ const OrganizationStructure: React.FC<OrganizationStructureProps> = ({ type }) =
             onNodeUpdate={handleNodeUpdate}
             onEdgeAdd={handleEdgeAdd}
             onEdgeDelete={handleEdgeDelete}
-            height={800}
+            height={`calc(100vh - 150px)`}
           />
         </ReactFlowProvider>
       )}

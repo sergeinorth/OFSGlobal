@@ -1,16 +1,18 @@
 /* App Styles */
 
 :root {
-  --primary-color: #0066cc;
-  --secondary-color: #6c757d;
-  --accent-color: #f8f9fa;
-  --text-color: #333;
-  --light-text: #fff;
-  --success-color: #28a745;
-  --error-color: #dc3545;
-  --warning-color: #ffc107;
+  --primary-color: #9D6AF5;
+  --secondary-color: #ff00ff;
+  --background-dark: #1a1a1a;
+  --surface-color: #2a2a2a;
+  --text-color: #ffffff;
+  --success-color: #00ff9d;
+  --error-color: #ff0055;
+  --warning-color: #ffaa00;
+  --neon-glow: 0 0 7px var(--primary-color);
+  --neon-glow-strong: 0 0 10px var(--primary-color), 0 0 20px var(--primary-color);
   --border-radius: 4px;
-  --box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  --box-shadow: 0 2px 10px rgba(157, 106, 245, 0.2);
   --transition: all 0.3s ease;
 }
 
@@ -21,11 +23,11 @@
 }
 
 body {
-  font-family: 'Roboto', Arial, sans-serif;
+  font-family: 'Rajdhani', 'Roboto', Arial, sans-serif;
   font-size: 16px;
   line-height: 1.5;
-  color: #333;
-  background-color: #f5f5f5;
+  color: var(--text-color);
+  background-color: var(--background-dark);
 }
 
 .container {
@@ -46,37 +48,149 @@ a:hover {
   color: #0055aa;
 }
 
+/* Киберпанк эффекты */
+.cyber-glitch {
+  position: relative;
+  color: var(--text-color);
+  text-shadow: var(--neon-glow);
+  animation: textShadowPulse 2s infinite;
+}
+
+.cyber-glitch::before {
+  content: attr(data-text);
+  position: absolute;
+  left: -2px;
+  text-shadow: 2px 0 var(--secondary-color);
+  top: 0;
+  color: var(--text-color);
+  background: var(--background-dark);
+  overflow: hidden;
+  clip: rect(0, 900px, 0, 0);
+  animation: noise-anim-2 3s infinite linear alternate-reverse;
+}
+
+.cyber-glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  left: 2px;
+  text-shadow: -2px 0 var(--primary-color);
+  top: 0;
+  color: var(--text-color);
+  background: var(--background-dark);
+  overflow: hidden;
+  clip: rect(0, 900px, 0, 0);
+  animation: noise-anim 2s infinite linear alternate-reverse;
+}
+
+@keyframes textShadowPulse {
+  0% {
+    text-shadow: var(--neon-glow);
+  }
+  50% {
+    text-shadow: var(--neon-glow-strong);
+  }
+  100% {
+    text-shadow: var(--neon-glow);
+  }
+}
+
+@keyframes noise-anim {
+  0% { clip: rect(86px, 9999px, 42px, 0); }
+  5% { clip: rect(99px, 9999px, 95px, 0); }
+  10% { clip: rect(19px, 9999px, 67px, 0); }
+  15% { clip: rect(83px, 9999px, 11px, 0); }
+  20% { clip: rect(35px, 9999px, 56px, 0); }
+  25% { clip: rect(77px, 9999px, 98px, 0); }
+  30% { clip: rect(23px, 9999px, 45px, 0); }
+  35% { clip: rect(91px, 9999px, 34px, 0); }
+  40% { clip: rect(56px, 9999px, 89px, 0); }
+  45% { clip: rect(12px, 9999px, 78px, 0); }
+  50% { clip: rect(67px, 9999px, 23px, 0); }
+  55% { clip: rect(34px, 9999px, 91px, 0); }
+  60% { clip: rect(89px, 9999px, 56px, 0); }
+  65% { clip: rect(78px, 9999px, 12px, 0); }
+  70% { clip: rect(23px, 9999px, 67px, 0); }
+  75% { clip: rect(91px, 9999px, 34px, 0); }
+  80% { clip: rect(56px, 9999px, 89px, 0); }
+  85% { clip: rect(12px, 9999px, 78px, 0); }
+  90% { clip: rect(67px, 9999px, 23px, 0); }
+  95% { clip: rect(34px, 9999px, 91px, 0); }
+  100% { clip: rect(89px, 9999px, 56px, 0); }
+}
+
+@keyframes noise-anim-2 {
+  0% { clip: rect(65px, 9999px, 32px, 0); }
+  5% { clip: rect(88px, 9999px, 75px, 0); }
+  10% { clip: rect(28px, 9999px, 46px, 0); }
+  15% { clip: rect(72px, 9999px, 21px, 0); }
+  20% { clip: rect(45px, 9999px, 66px, 0); }
+  25% { clip: rect(67px, 9999px, 88px, 0); }
+  30% { clip: rect(33px, 9999px, 55px, 0); }
+  35% { clip: rect(81px, 9999px, 44px, 0); }
+  40% { clip: rect(46px, 9999px, 79px, 0); }
+  45% { clip: rect(22px, 9999px, 68px, 0); }
+  50% { clip: rect(57px, 9999px, 33px, 0); }
+  55% { clip: rect(44px, 9999px, 81px, 0); }
+  60% { clip: rect(79px, 9999px, 46px, 0); }
+  65% { clip: rect(68px, 9999px, 22px, 0); }
+  70% { clip: rect(33px, 9999px, 57px, 0); }
+  75% { clip: rect(81px, 9999px, 44px, 0); }
+  80% { clip: rect(46px, 9999px, 79px, 0); }
+  85% { clip: rect(22px, 9999px, 68px, 0); }
+  90% { clip: rect(57px, 9999px, 33px, 0); }
+  95% { clip: rect(44px, 9999px, 81px, 0); }
+  100% { clip: rect(79px, 9999px, 46px, 0); }
+}
+
+/* Неоновые кнопки */
 button {
   cursor: pointer;
-  border: none;
-  background-color: var(--primary-color);
-  color: var(--light-text);
-  padding: 0.5rem 1rem;
+  border: 1px solid var(--primary-color);
+  background-color: transparent;
+  color: var(--primary-color);
+  padding: 0.5rem 1.5rem;
   border-radius: var(--border-radius);
   font-size: 1rem;
+  font-family: 'Rajdhani', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 2px;
   transition: var(--transition);
+  position: relative;
+  overflow: hidden;
 }
 
 button:hover {
-  background-color: #0055aa;
+  background-color: var(--primary-color);
+  color: var(--background-dark);
+  box-shadow: var(--neon-glow);
 }
 
-button.secondary {
-  background-color: var(--secondary-color);
+button:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    120deg,
+    transparent,
+    rgba(0, 255, 157, 0.4),
+    transparent
+  );
+  transition: 0.5s;
 }
 
-button.secondary:hover {
-  background-color: #5a6268;
+button:hover:before {
+  left: 100%;
 }
 
-button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
-
+/* Неоновые поля ввода */
 input, select, textarea {
+  background-color: rgba(0, 255, 157, 0.1);
+  border: 1px solid var(--primary-color);
+  color: var(--text-color);
   padding: 0.5rem;
-  border: 1px solid #ddd;
   border-radius: var(--border-radius);
   font-size: 1rem;
   width: 100%;
@@ -84,9 +198,9 @@ input, select, textarea {
 }
 
 input:focus, select:focus, textarea:focus {
-  border-color: var(--primary-color);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.25);
+  box-shadow: var(--neon-glow);
+  background-color: rgba(0, 255, 157, 0.2);
 }
 
 .form-group {
@@ -143,15 +257,34 @@ input:focus, select:focus, textarea:focus {
   border: 1px solid #bee5eb;
 }
 
-/* Responsive design */
+/* Скроллбар */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(157, 106, 245, 0.5);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(157, 106, 245, 0.7);
+  box-shadow: 0 0 6px rgba(157, 106, 245, 0.5);
+}
+
+/* Адаптивный дизайн */
 @media (max-width: 768px) {
   .page-container {
     padding: 16px;
   }
   
-  .placeholder-page {
-    height: calc(100vh - 56px);
-    font-size: 20px;
+  .cyber-glitch {
+    font-size: 24px;
   }
 }
 
@@ -167,9 +300,11 @@ input:focus, select:focus, textarea:focus {
 }
 
 .page-title {
-  font-size: 1.5rem;
+  font-size: 2rem;
   margin-bottom: 0.5rem;
-  color: #333;
+  color: var(--text-color);
+  text-transform: uppercase;
+  letter-spacing: 2px;
 }
 
 /* Стили для компонентов */

@@ -21,8 +21,8 @@ const CustomNode: React.FC<NodeProps<CustomNodeData>> = ({ data, selected }) => 
   return (
     <Box
       sx={{
-        width: '200px',
-        padding: '10px',
+        width: '280px',
+        padding: '12px',
         backgroundColor: 'rgba(26, 26, 34, 0.9)',
         borderRadius: '8px',
         border: `2px solid ${borderColor}`,
@@ -37,112 +37,117 @@ const CustomNode: React.FC<NodeProps<CustomNodeData>> = ({ data, selected }) => 
         },
         position: 'relative',
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'row',
         alignItems: 'center',
-        color: '#ffffff'
+        color: '#ffffff',
+        cursor: 'pointer'
       }}
     >
-      {/* Коннекторы для входящих и исходящих связей */}
+      {/* Коннекторы для входящих и исходящих связей - делаем больше для лучшего UX */}
       <Handle
         type="target"
         position={Position.Top}
-        style={{ background: borderColor, width: '10px', height: '10px' }}
+        style={{ background: borderColor, width: '12px', height: '12px', top: '-6px' }}
       />
       <Handle
         type="source"
         position={Position.Bottom}
-        style={{ background: borderColor, width: '10px', height: '10px' }}
+        style={{ background: borderColor, width: '12px', height: '12px', bottom: '-6px' }}
       />
       
-      {/* Аватар сотрудника (если есть) */}
-      {avatar ? (
-        <Avatar
-          src={avatar}
-          alt={label}
-          sx={{
-            width: 60,
-            height: 60,
-            mb: 1,
-            border: `2px solid ${borderColor}`,
-            boxShadow: '0 0 8px rgba(0, 0, 0, 0.3)'
-          }}
-        />
-      ) : (
-        <Avatar
-          sx={{
-            width: 60,
-            height: 60,
-            mb: 1,
-            bgcolor: 'rgba(157, 106, 245, 0.7)',
-            border: `2px solid ${borderColor}`,
-            boxShadow: '0 0 8px rgba(0, 0, 0, 0.3)'
-          }}
-        >
-          {label.substring(0, 1).toUpperCase()}
-        </Avatar>
-      )}
+      {/* Аватар сотрудника (если есть) - добавляем отступ справа */}
+      <Box sx={{ mr: 2 }}>
+        {avatar ? (
+          <Avatar
+            src={avatar}
+            alt={label}
+            sx={{
+              width: 56,
+              height: 56,
+              border: `2px solid ${borderColor}`,
+              boxShadow: '0 0 8px rgba(0, 0, 0, 0.3)'
+            }}
+          />
+        ) : (
+          <Avatar
+            sx={{
+              width: 56,
+              height: 56,
+              bgcolor: 'rgba(157, 106, 245, 0.7)',
+              border: `2px solid ${borderColor}`,
+              boxShadow: '0 0 8px rgba(0, 0, 0, 0.3)'
+            }}
+          >
+            {label.substring(0, 1).toUpperCase()}
+          </Avatar>
+        )}
+      </Box>
       
-      {/* Имя сотрудника */}
-      <Typography
-        variant="subtitle1"
-        fontWeight="bold"
-        textAlign="center"
-        sx={{
-          mb: 0.5,
-          color: '#ffffff',
-          textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
-        }}
-      >
-        {label}
-      </Typography>
-      
-      {/* Должность */}
-      {position && (
+      {/* Текстовая информация - справа от аватара */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
+        {/* Имя сотрудника */}
         <Typography
-          variant="body2"
-          textAlign="center"
+          variant="subtitle1"
+          fontWeight="bold"
           sx={{
             mb: 0.5,
-            color: '#cccccc',
-            fontFamily: 'monospace',
-            backgroundColor: 'rgba(0, 0, 0, 0.2)',
-            px: 1,
-            py: 0.5,
-            borderRadius: '4px',
-            width: '100%'
+            color: '#ffffff',
+            textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
           }}
         >
-          {position}
+          {label}
         </Typography>
-      )}
+        
+        {/* Должность */}
+        {position && (
+          <Typography
+            variant="body2"
+            sx={{
+              mb: 0.5,
+              color: '#cccccc',
+              fontFamily: 'monospace',
+              backgroundColor: 'rgba(0, 0, 0, 0.2)',
+              px: 1,
+              py: 0.5,
+              borderRadius: '4px',
+              width: '100%'
+            }}
+          >
+            {position}
+          </Typography>
+        )}
+        
+        {/* Руководитель */}
+        {manager && (
+          <Typography
+            variant="caption"
+            fontStyle="italic"
+            sx={{
+              color: '#aaaaaa'
+            }}
+          >
+            Руководитель: {manager}
+          </Typography>
+        )}
+      </Box>
       
-      {/* Руководитель */}
-      {manager && (
-        <Typography
-          variant="caption"
-          fontStyle="italic"
-          textAlign="center"
-          sx={{
-            color: '#aaaaaa',
-            mb: 1
-          }}
-        >
-          Руководитель: {manager}
-        </Typography>
-      )}
-      
-      {/* Индикатор комментариев */}
+      {/* Индикатор комментариев - увеличиваем размер для лучшего клика */}
       {activeComments > 0 && (
         <Badge
           badgeContent={activeComments}
           color="error"
           sx={{
             position: 'absolute',
-            top: '5px',
-            right: '5px'
+            top: '8px',
+            right: '8px',
+            '& .MuiBadge-badge': {
+              fontSize: '0.8rem',
+              height: '22px',
+              minWidth: '22px'
+            }
           }}
         >
-          <CommentIcon sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
+          <CommentIcon sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '1.4rem' }} />
         </Badge>
       )}
     </Box>

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, Suspense } from 'react';
 import ReactFlow, {
   Node,
   Edge,
@@ -32,7 +32,7 @@ import CommentIcon from '@mui/icons-material/Comment';
 // Импортируем типы
 import { EntityType, RelationType, EntityNode, EntityRelation, Comment } from './types';
 
-// Кастомный компонент узла
+// Импортируем кастомный компонент узла напрямую
 import CustomNode from './CustomNode';
 
 // Стилизованный контейнер для графа
@@ -69,7 +69,7 @@ export interface ReactFlowGraphProps {
   onEdgeAdd?: (edge: { from: string, to: string, type: RelationType }) => void;
   onEdgeDelete?: (edgeId: string) => void;
   readOnly?: boolean;
-  height?: number;
+  height?: number | string;
 }
 
 // Функция для сохранения комментариев узла
@@ -95,6 +95,41 @@ const loadNodeComments = (nodeId: string, type: string): Comment[] | null => {
     console.error('Ошибка при загрузке комментариев из localStorage:', error);
   }
   return null;
+};
+
+// Функция для сохранения позиций узлов
+const saveNodePositions = (nodes: Node[], type: string) => {
+  try {
+    const positions = nodes.map(node => ({
+      id: node.id,
+      position: node.position
+    }));
+    const key = `node_positions_${type}`;
+    localStorage.setItem(key, JSON.stringify(positions));
+    console.log(`Позиции узлов для типа ${type} сохранены в localStorage`);
+  } catch (error) {
+    console.error('Ошибка при сохранении позиций узлов в localStorage:', error);
+  }
+};
+
+// Функция для загрузки позиций узлов
+const loadNodePositions = (type: string): Record<string, { x: number; y: number }> => {
+  try {
+    const key = `node_positions_${type}`;
+    const savedPositions = localStorage.getItem(key);
+    if (savedPositions) {
+      const positions = JSON.parse(savedPositions);
+      const positionsMap: Record<string, { x: number; y: number }> = {};
+      positions.forEach((item: { id: string; position: { x: number; y: number } }) => {
+        positionsMap[item.id] = item.position;
+      });
+      console.log(`Позиции узлов для типа ${type} загружены из localStorage`);
+      return positionsMap;
+    }
+  } catch (error) {
+    console.error('Ошибка при загрузке позиций узлов из localStorage:', error);
+  }
+  return {};
 };
 
 // Функция для преобразования EntityNode в Node для ReactFlow
@@ -203,16 +238,27 @@ const ReactFlowGraph: React.FC<ReactFlowGraphProps> = ({
         entityNodeToReactFlowNode(node, initialEdges)
       );
       
-      // Устанавливаем начальные позиции
-      // В реальном проекте здесь можно загружать сохраненные позиции из localStorage
+      // Загружаем сохраненные позиции из localStorage
+      const savedPositions = loadNodePositions(type);
+      
+      // Устанавливаем позиции узлов, используя сохраненные или дефолтные
       const positionedNodes = flowNodes.map((node, index) => {
-        return {
-          ...node,
-          position: { 
-            x: 100 + (index % 3) * 250, 
-            y: 100 + Math.floor(index / 3) * 150 
-          }
-        };
+        if (savedPositions[node.id]) {
+          // Используем сохраненную позицию
+          return {
+            ...node,
+            position: savedPositions[node.id]
+          };
+        } else {
+          // Используем дефолтную позицию в виде сетки
+          return {
+            ...node,
+            position: { 
+              x: 100 + (index % 3) * 300, 
+              y: 100 + Math.floor(index / 3) * 180 
+            }
+          };
+        }
       });
       
       // Преобразуем связи
@@ -224,7 +270,7 @@ const ReactFlowGraph: React.FC<ReactFlowGraphProps> = ({
       setEdges(flowEdges);
       setIsLoading(false);
     }
-  }, [initialNodes, initialEdges, setNodes, setEdges]);
+  }, [initialNodes, initialEdges, type, setNodes, setEdges]);
   
   // Выделение узла
   useEffect(() => {
@@ -237,6 +283,17 @@ const ReactFlowGraph: React.FC<ReactFlowGraphProps> = ({
       );
     }
   }, [selectedNodeId, setNodes]);
+  
+  // Сохраняем позиции при изменении узлов
+  const handleNodesChange = useCallback((changes: NodeChange[]) => {
+    onNodesChange(changes);
+    
+    // Сохраняем позиции с небольшой задержкой, чтобы избежать частых записей при перетаскивании
+    setTimeout(() => {
+      const currentNodes = reactFlowInstance.getNodes();
+      saveNodePositions(currentNodes, type);
+    }, 500);
+  }, [onNodesChange, reactFlowInstance, type]);
   
   // Обработчик клика по узлу
   const onNodeClick: NodeMouseHandler = useCallback((event, node) => {
@@ -295,18 +352,30 @@ const ReactFlowGraph: React.FC<ReactFlowGraphProps> = ({
     }
   }, [currentEditNode, editNodeName, editNodePosition, editNodeManager, onNodeUpdate]);
   
-  // Обработчик клика по области для добавления узла
-  const onPaneClick = useCallback((event) => {
-    if (reactFlowWrapper.current && onNodeAdd && !readOnly) {
-      const boundingRect = reactFlowWrapper.current.getBoundingClientRect();
+  // Обработчик клика по пустому месту для добавления нового узла
+  const onPaneClick = useCallback((event: any) => {
+    if (!readOnly && reactFlowWrapper.current && onNodeAdd) {
+      const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
       const position = reactFlowInstance.project({
-        x: event.clientX - boundingRect.left,
-        y: event.clientY - boundingRect.top
+        x: event.clientX - reactFlowBounds.left,
+        y: event.clientY - reactFlowBounds.top,
       });
-      
       onNodeAdd(position);
     }
-  }, [onNodeAdd, readOnly, reactFlowInstance]);
+  }, [readOnly, reactFlowInstance, onNodeAdd]);
+
+  // Обработчик клика на кнопку добавления узла
+  const handleAddNodeBtnClick = useCallback(() => {
+    if (onNodeAdd) {
+      // Добавляем узел в центр видимой области
+      const viewport = reactFlowInstance.getViewport();
+      const center = reactFlowInstance.project({
+        x: reactFlowWrapper.current ? reactFlowWrapper.current.clientWidth / 2 : 300,
+        y: reactFlowWrapper.current ? reactFlowWrapper.current.clientHeight / 2 : 200,
+      });
+      onNodeAdd(center);
+    }
+  }, [reactFlowInstance, onNodeAdd]);
   
   // Обработчик открытия диалога комментариев
   const handleOpenCommentDialog = (node: EntityNode) => {
@@ -365,51 +434,75 @@ const ReactFlowGraph: React.FC<ReactFlowGraphProps> = ({
   };
   
   return (
-    <GraphContainer sx={{ height: `${height}px` }}>
+    <GraphContainer ref={reactFlowWrapper} sx={{ height }}>
       {isLoading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-          <CircularProgress color="primary" />
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            height: '100%' 
+          }}
+        >
+          <CircularProgress color="secondary" />
         </Box>
       ) : (
-        <div ref={reactFlowWrapper} style={{ width: '100%', height: '100%' }}>
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onNodeClick={onNodeClick}
-            onNodeDoubleClick={onNodeDoubleClick}
-            onPaneClick={onPaneClick}
-            nodeTypes={nodeTypes}
-            connectionLineType={ConnectionLineType.SmoothStep}
-            defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-            minZoom={0.1}
-            maxZoom={2}
-            fitView
-          >
-            <Controls />
-            <Background color="#464854" gap={16} />
-            {!readOnly && (
-              <Panel position="top-right">
-                <Tooltip title="Добавить узел">
-                  <Fab 
-                    color="primary" 
-                    size="small" 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (onNodeAdd) {
-                        onNodeAdd({ x: 200, y: 200 });
-                      }
-                    }}
-                  >
-                    <AddIcon />
-                  </Fab>
-                </Tooltip>
-              </Panel>
-            )}
-          </ReactFlow>
-        </div>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={handleNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          nodeTypes={nodeTypes}
+          onNodeClick={onNodeClick}
+          onNodeDoubleClick={onNodeDoubleClick}
+          fitView
+          snapToGrid
+          snapGrid={[15, 15]}
+          defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+          onPaneClick={onPaneClick}
+          zoomOnDoubleClick={false}
+          connectionLineType={ConnectionLineType.SmoothStep}
+          connectionLineStyle={{ stroke: '#9D6AF5', strokeWidth: 2 }}
+          defaultEdgeOptions={{ 
+            type: 'smoothstep',
+            markerEnd: { type: MarkerType.ArrowClosed }, 
+            style: { stroke: '#9D6AF5', strokeWidth: 2 }
+          }}
+        >
+          <Background color="#1a1a1e" gap={20} />
+          <Controls 
+            showInteractive={false} 
+            position="bottom-right"
+            style={{ 
+              display: 'flex', 
+              flexDirection: 'column',
+              background: 'rgba(26, 26, 34, 0.9)',
+              borderRadius: '8px',
+              border: '1px solid rgba(157, 106, 245, 0.3)',
+              padding: '8px' 
+            }}
+          />
+          
+          {!readOnly && (
+            <Panel position="top-right">
+              <Fab
+                color="secondary"
+                size="medium"
+                onClick={handleAddNodeBtnClick}
+                sx={{
+                  background: 'linear-gradient(45deg, #9D6AF5, #b350ff)',
+                  boxShadow: '0 4px 10px rgba(157, 106, 245, 0.5)',
+                  '&:hover': {
+                    background: 'linear-gradient(45deg, #a478f5, #c070ff)'
+                  }
+                }}
+              >
+                <AddIcon />
+              </Fab>
+            </Panel>
+          )}
+        </ReactFlow>
       )}
       
       {/* Диалог редактирования узла */}
