@@ -37,7 +37,7 @@ if exist "%BASE_DIR%\.venv\Scripts\python.exe" (
 )
 
 :: Запускаем бэкенд в отдельном окне
-start "OFS Бэкенд (full_api)" cmd /c "cd %BASE_DIR%\backend && %PYTHON_CMD% -m uvicorn full_api:app --host 127.0.0.1 --port 8000 --reload"
+start "OFS Бэкенд (full_api)" cmd /c "cd %BASE_DIR%\backend && %PYTHON_CMD% -m uvicorn full_api:app --host 127.0.0.1 --port 8001"
 
 :: Ждем пару секунд
 echo [ИНФО] Ожидание запуска бэкенда (3 секунды)...
