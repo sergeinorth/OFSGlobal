@@ -14,9 +14,9 @@ interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
-// Используем относительный путь для baseURL, чтобы запросы шли через Vite proxy
-// Бэкенд ожидает пути с /api, и прокси (после исправления) будет их передавать
-export const API_URL = '/api';
+// Возвращаем явное указание URL бэкенда
+// Это работало для основного API (staff), и мы подгоним auth_api под этот же формат
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // Настройки загрузки файлов
 export const UPLOAD_MAX_SIZE = 5 * 1024 * 1024; // 5MB

@@ -27,9 +27,9 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-@app.route('/api/login/access-token', methods=['POST'])
+@app.route('/login/access-token', methods=['POST'])
 def login_access_token():
-    print("[LOG:AUTH] Получен запрос на /api/login/access-token")
+    print("[LOG:AUTH] Получен запрос на /login/access-token")
     
     # Получаем данные из формы
     username = request.form.get('username')
@@ -74,9 +74,9 @@ def login_access_token():
     
     return jsonify({"access_token": access_token, "token_type": "bearer"})
 
-@app.route('/api/login/test-token', methods=['GET'])
+@app.route('/login/test-token', methods=['GET'])
 def test_token():
-    print("[LOG:AUTH] Получен запрос на /api/login/test-token")
+    print("[LOG:AUTH] Получен запрос на /login/test-token")
     
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
@@ -120,9 +120,9 @@ def test_token():
         print(f"[LOG:AUTH] Ошибка проверки токена: {str(e)}")
         return jsonify({"detail": str(e)}), 401
 
-@app.route('/api/register', methods=['POST'])
+@app.route('/register', methods=['POST'])
 def register():
-    print("[LOG:AUTH] Получен запрос на /api/register")
+    print("[LOG:AUTH] Получен запрос на /register")
     
     # Пытаемся получить данные из разных форматов
     data = request.get_json(silent=True)
@@ -183,23 +183,23 @@ def register():
         print(f"[LOG:AUTH] Ошибка при регистрации пользователя: {str(e)}")
         return jsonify({"detail": f"Ошибка при регистрации: {str(e)}"}), 500
 
-@app.route('/api/')
+@app.route('/')
 def index():
     return jsonify({
         "name": "OFS Global Auth API",
         "version": "1.0",
         "status": "running",
         "endpoints": [
-            "/api/login/access-token",
-            "/api/login/test-token",
-            "/api/register",
-            "/api/test-register",
-            "/api/debug/routes"
+            "/login/access-token",
+            "/login/test-token",
+            "/register",
+            "/test-register",
+            "/debug/routes"
         ]
     })
 
 # Маршрут для отладки - показывает все зарегистрированные маршруты
-@app.route('/api/debug/routes')
+@app.route('/debug/routes')
 def list_routes():
     routes = []
     for rule in app.url_map.iter_rules():
@@ -211,9 +211,9 @@ def list_routes():
     return jsonify(routes)
 
 # Тестовый маршрут для проверки регистрации
-@app.route('/api/test-register', methods=['POST', 'GET'])
+@app.route('/test-register', methods=['POST', 'GET'])
 def test_register():
-    print("[LOG:AUTH] Получен запрос на /api/test-register")
+    print("[LOG:AUTH] Получен запрос на /test-register")
     
     # Если GET-запрос, просто возвращаем форму
     if request.method == 'GET':
