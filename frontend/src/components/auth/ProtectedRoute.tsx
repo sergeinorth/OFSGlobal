@@ -7,24 +7,31 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   
   useEffect(() => {
     console.log(`[LOG:ProtectedRoute] Текущий путь: ${window.location.pathname}`);
-    console.log(`[LOG:ProtectedRoute] Статус аутентификации: ${isAuthenticated}`);
-    const token = localStorage.getItem('token');
-    console.log(`[LOG:ProtectedRoute] Токен в localStorage: ${token ? 'присутствует' : 'отсутствует'}`);
-    if (token) {
-      console.log(`[LOG:ProtectedRoute] Начало токена: ${token.substring(0, 15)}...`);
+    if (!loading) {
+        console.log(`[LOG:ProtectedRoute] Статус аутентификации ПОСЛЕ ЗАГРУЗКИ: ${isAuthenticated}`);
+        const token = localStorage.getItem('token');
+        console.log(`[LOG:ProtectedRoute] Токен в localStorage ПОСЛЕ ЗАГРУЗКИ: ${token ? 'присутствует' : 'отсутствует'}`);
+        if (token) {
+            console.log(`[LOG:ProtectedRoute] Начало токена ПОСЛЕ ЗАГРУЗКИ: ${token.substring(0, 15)}...`);
+        }
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, loading]);
+
+  if (loading) {
+    console.log('[LOG:ProtectedRoute] Идет проверка аутентификации (loading)...');
+    return <div>Загрузка...</div>;
+  }
 
   if (!isAuthenticated) {
-    console.log('[LOG:ProtectedRoute] Пользователь не аутентифицирован, перенаправление на /login');
+    console.log('[LOG:ProtectedRoute] Пользователь не аутентифицирован ПОСЛЕ ЗАГРУЗКИ, перенаправление на /login');
     return <Navigate to="/login" replace />;
   }
 
-  console.log('[LOG:ProtectedRoute] Пользователь аутентифицирован, отображаем защищенный контент');
+  console.log('[LOG:ProtectedRoute] Пользователь аутентифицирован ПОСЛЕ ЗАГРУЗКИ, отображаем защищенный контент');
   return <>{children}</>;
 };
 

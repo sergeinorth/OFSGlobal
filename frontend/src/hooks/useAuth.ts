@@ -3,36 +3,42 @@ import api from '../services/api';
 
 interface UseAuthReturn {
   isAuthenticated: boolean;
+  loading: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
 export const useAuth = (): UseAuthReturn => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const checkAuth = useCallback(async () => {
+    setLoading(true);
     // Не проверяем авторизацию на странице логина
     if (window.location.pathname.includes('/login')) {
-      console.log('[LOG:Auth] Страница логина, пропускаем проверку авторизации');
-      console.log(`[LOG:Auth] Текущий путь: ${window.location.pathname}`);
+      console.log('[LOG:Auth:checkAuth] Страница логина, пропускаем проверку авторизации');
+      setLoading(false);
       return;
     }
 
     try {
-      // Для проверки аутентификации используем FastAPI эндпоинт без префикса
+      // Для проверки аутентификации используем FastAPI эндпоинт GET /users/me
       const token = localStorage.getItem('token');
-      console.log(`[LOG:Auth] Перед запросом test-token, токен: ${token ? 'присутствует' : 'отсутствует'}`);
+      console.log(`[LOG:Auth:checkAuth] Перед запросом /users/me, токен: ${token ? 'присутствует' : 'отсутствует'}`);
       
-      await api.get('/login/test-token');
+      const response = await api.get('/users/me');
       setIsAuthenticated(true);
-      console.log('[LOG:Auth] Пользователь аутентифицирован');
+      console.log('[LOG:Auth:checkAuth] Успешная проверка через /users/me, пользователь аутентифицирован', response.data);
     } catch (error) {
       setIsAuthenticated(false);
-      console.log('[LOG:Auth] Пользователь не аутентифицирован');
+      console.log('[LOG:Auth:checkAuth] Ошибка проверки токена, пользователь не аутентифицирован', error);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    console.log("[LOG:Auth:useEffect] Вызов checkAuth из useEffect");
     checkAuth();
   }, [checkAuth]);
 
@@ -79,9 +85,11 @@ export const useAuth = (): UseAuthReturn => {
       setIsAuthenticated(true);
       
       // Используем задержку перед редиректом, чтобы localStorage успел обновиться
-      console.log('[LOG:Auth] Подготовка к перенаправлению на /dashboard...');
+      console.log('[LOG:Auth:login] Подготовка к перенаправлению на /dashboard...');
+      const tokenBeforeRedirect = localStorage.getItem('token');
+      console.log(`[LOG:Auth:login] Токен в localStorage ПЕРЕД редиректом: ${tokenBeforeRedirect ? tokenBeforeRedirect.substring(0, 15) + '...' : 'не найден'}`);
       setTimeout(() => {
-        console.log('[LOG:Auth] Выполняю перенаправление на /dashboard...');
+        console.log('[LOG:Auth:login] Выполняю перенаправление на /dashboard...');
         window.location.href = '/dashboard';
       }, 100);
     } catch (error) {
@@ -104,6 +112,7 @@ export const useAuth = (): UseAuthReturn => {
 
   return {
     isAuthenticated,
+    loading,
     login,
     logout,
   };
