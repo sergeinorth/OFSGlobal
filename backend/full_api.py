@@ -2,15 +2,21 @@ import sqlite3
 import os
 import traceback  # Добавляем модуль для печати стека вызовов
 import logging    # Добавляем логирование
-from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi import FastAPI, HTTPException, Depends, Request, APIRouter # <--- Добавляем APIRouter
 from fastapi.middleware.cors import CORSMiddleware  # Импортируем CORS middleware
 from pydantic import BaseModel, EmailStr, Field
 from typing import List, Optional, Dict, Any, Union
 from enum import Enum
 import uvicorn
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from complete_schema import ALL_SCHEMAS
 import json
+
+# --- НОВЫЕ ИМПОРТЫ ДЛЯ АУТЕНТИФИКАЦИИ ---
+from passlib.context import CryptContext
+from jose import JWTError, jwt
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+# --- КОНЕЦ НОВЫХ ИМПОРТОВ ---
 
 # Настройка логирования
 logging.basicConfig(
@@ -26,8 +32,24 @@ logger = logging.getLogger("ofs_api")
 # Имя нашей базы данных с новой схемой
 DB_PATH = "full_api_new.db"
 
+# --- НОВЫЕ НАСТРОЙКИ АУТЕНТИФИКАЦИИ ---
+SECRET_KEY = "ofsglobal-super-secret-key-change-me"  # !!! ВАЖНО: Смените этот ключ!
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 дней
+
+# Схема для получения токена из заголовка Authorization: Bearer <token>
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login/access-token")
+
+# Контекст для хеширования паролей
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# --- КОНЕЦ НОВЫХ НАСТРОЕК ---
+
 # Создаем приложение
 app = FastAPI(title="OFS Global API", description="Гибкое API для OFS Global", version="2.0.0")
+
+# --- СОЗДАЕМ РОУТЕР ДЛЯ АУТЕНТИФИКАЦИИ ---
+auth_router = APIRouter(tags=["Authentication"]) # Добавляем тег для группировки в Swagger
+# --- КОНЕЦ СОЗДАНИЯ РОУТЕРА ---
 
 # Настройка CORS
 app.add_middleware(
@@ -55,6 +77,13 @@ try:
 except ImportError:
     has_org_structure_router = False
     logger.warning("Не удалось импортировать API организационной структуры")
+
+# Добавляем событие для инициализации БД при старте
+@app.on_event("startup")
+def startup_event():
+    logger.info("Выполняется событие startup: инициализация базы данных...")
+    init_db()
+    logger.info("Инициализация базы данных завершена.")
 
 # ================== МОДЕЛИ PYDANTIC ==================
 
@@ -211,6 +240,22 @@ class Position(PositionBase):
     class Config:
         from_attributes = True
 
+# Модели для Position_Function (Связь должности и функции)
+class PositionFunctionBase(BaseModel):
+    position_id: int
+    function_id: int
+    is_primary: bool = True
+
+class PositionFunctionCreate(PositionFunctionBase):
+    pass
+
+class PositionFunction(PositionFunctionBase):
+    id: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
 # Модели для Staff (Сотрудник)
 class StaffBase(BaseModel):
     email: EmailStr
@@ -339,6 +384,45 @@ class VFP(VFPBase):
     class Config:
         orm_mode = True
 
+# --- НОВЫЕ МОДЕЛИ ДЛЯ АУТЕНТИФИКАЦИИ --- 
+
+class Token(BaseModel):
+    """Модель ответа с JWT токеном."""
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    """Модель данных, хранящихся внутри JWT токена."""
+    sub: Optional[str] = None # Используем 'sub' (subject) как стандартное поле для идентификатора
+
+class UserBase(BaseModel):
+    """Базовая модель пользователя."""
+    email: EmailStr
+    full_name: Optional[str] = None
+    is_active: bool = True
+    is_superuser: bool = False
+
+class UserCreate(UserBase):
+    """Модель для создания пользователя (регистрации)."""
+    password: str
+
+class UserInDBBase(UserBase):
+    """Модель пользователя, как он хранится в БД (с хешем пароля)."""
+    id: int
+    hashed_password: str
+    
+    class Config:
+        from_attributes = True # Для совместимости с ORM-like объектами (sqlite3.Row)
+
+class User(UserBase):
+    """Модель пользователя для возврата клиенту (без пароля)."""
+    id: int
+    
+    class Config:
+        from_attributes = True
+
+# --- КОНЕЦ НОВЫХ МОДЕЛЕЙ --- 
+
 # ================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==================
 
 # Функция для получения соединения с базой данных
@@ -355,6 +439,67 @@ def get_db():
         yield conn
     finally:
         conn.close()
+
+# --- НОВЫЕ УТИЛИТЫ АУТЕНТИФИКАЦИИ ---
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Проверяет соответствие пароля хешу."""
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password: str) -> str:
+    """Возвращает хеш пароля."""
+    return pwd_context.hash(password)
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    """Создает JWT токен."""
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+async def get_user_from_db(db: sqlite3.Connection, email: str) -> Optional[UserInDBBase]:
+    """Вспомогательная функция для получения пользователя из БД по email."""
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM user WHERE email = ?", (email,))
+    user_data = cursor.fetchone()
+    if user_data:
+        return UserInDBBase.model_validate(dict(user_data))
+    return None
+
+async def get_current_user(token: str = Depends(oauth2_scheme), db: sqlite3.Connection = Depends(get_db)) -> User:
+    """Зависимость FastAPI для получения текущего пользователя из токена."""
+    credentials_exception = HTTPException(
+        status_code=401,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+        token_data = TokenData(sub=email)
+    except JWTError:
+        raise credentials_exception
+    
+    user = await get_user_from_db(db, email=token_data.sub)
+    if user is None:
+        raise credentials_exception
+    
+    # Возвращаем модель User (без хеша пароля)
+    return User.model_validate(user)
+
+async def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
+    """Зависимость для проверки, что пользователь активен."""
+    if not current_user.is_active:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user
+
+# --- КОНЕЦ НОВЫХ УТИЛИТ --- 
 
 # Инициализация базы данных, если она не существует
 def init_db():
@@ -402,6 +547,92 @@ def init_db():
             conn.close()
 
 # ================== РОУТЫ API ==================
+
+# --- НОВЫЕ ЭНДПОИНТЫ АУТЕНТИФИКАЦИИ (ЧЕРЕЗ РОУТЕР) ---
+
+@auth_router.post("/register", response_model=User)
+async def register_user(user_in: UserCreate, db: sqlite3.Connection = Depends(get_db)):
+    """Регистрация нового пользователя."""
+    logger.info(f"Попытка регистрации пользователя: {user_in.email}")
+    
+    # Проверяем, не существует ли уже пользователь с таким email
+    cursor = db.cursor()
+    cursor.execute("SELECT id FROM user WHERE email = ?", (user_in.email,))
+    existing_user = cursor.fetchone()
+    
+    if existing_user:
+        logger.warning(f"Пользователь с email {user_in.email} уже существует")
+        raise HTTPException(
+            status_code=400,
+            detail="Пользователь с таким email уже существует",
+        )
+    
+    # Хешируем пароль
+    hashed_password = get_password_hash(user_in.password)
+    
+    # Добавляем нового пользователя
+    try:
+        cursor.execute(
+            "INSERT INTO user (email, hashed_password, full_name, is_active, is_superuser) VALUES (?, ?, ?, ?, ?)",
+            (
+                user_in.email,
+                hashed_password,
+                user_in.full_name,
+                user_in.is_active,
+                user_in.is_superuser,
+            )
+        )
+        db.commit()
+        user_id = cursor.lastrowid
+        logger.info(f"Пользователь {user_in.email} успешно зарегистрирован с ID {user_id}")
+        
+        # Возвращаем данные созданного пользователя (без пароля)
+        # Перезапрашиваем из базы, чтобы получить модель UserInDBBase
+        new_user_db = await get_user_from_db(db, user_in.email)
+        if new_user_db:
+            return User.model_validate(new_user_db)
+        else: # На всякий случай, если вдруг не нашли только что созданного
+             raise HTTPException(status_code=500, detail="Ошибка получения созданного пользователя")
+
+    except sqlite3.Error as e:
+        db.rollback()
+        logger.error(f"Ошибка SQLite при регистрации пользователя {user_in.email}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Ошибка базы данных при регистрации: {str(e)}",
+        )
+
+@auth_router.post("/login/access-token", response_model=Token)
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: sqlite3.Connection = Depends(get_db)):
+    """Аутентификация пользователя и выдача JWT токена."""
+    logger.info(f"Попытка входа пользователя: {form_data.username}")
+    
+    user = await get_user_from_db(db, email=form_data.username)
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        logger.warning(f"Неудачная попытка входа для: {form_data.username}")
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    if not user.is_active:
+        logger.warning(f"Попытка входа неактивного пользователя: {form_data.username}")
+        raise HTTPException(status_code=400, detail="Inactive user")
+    
+    access_token = create_access_token(
+        data={"sub": user.email} # Используем email как subject в токене
+    )
+    logger.info(f"Успешный вход для пользователя: {form_data.username}")
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@auth_router.get("/users/me", response_model=User)
+async def read_users_me(current_user: User = Depends(get_current_active_user)):
+    """Получение данных текущего аутентифицированного пользователя."""
+    logger.info(f"Запрос данных для пользователя: {current_user.email}")
+    return current_user
+
+# --- КОНЕЦ НОВЫХ ЭНДПОИНТОВ АУТЕНТИФИКАЦИИ ---
 
 # API для организаций
 @app.get("/organizations/", response_model=List[Organization])
@@ -1790,8 +2021,10 @@ def read_root():
 
 # Инициализация и запуск сервера
 @app.on_event("startup")
-def startup():
+def startup_event():
+    logger.info("Выполняется событие startup: инициализация базы данных...")
     init_db()
+    logger.info("Инициализация базы данных завершена.")
 
 # Подключаем роутер для организационной структуры, если он доступен
 if has_org_structure_router:
@@ -2313,5 +2546,21 @@ def delete_vfp(vfp_id: int, db: sqlite3.Connection = Depends(get_db)):
     
     return {"message": "ЦКП успешно удален"}
 
+# ================== ПОДКЛЮЧЕНИЕ РОУТЕРОВ ==================
+
+# Подключаем роутер аутентификации
+app.include_router(auth_router)
+
+# Подключаем роутер организационной структуры, если он найден
+if has_org_structure_router:
+    app.include_router(org_structure_router, prefix="/org-structure")
+
+# ================== ЗАПУСК (для прямого запуска файла) ==================
+
 if __name__ == "__main__":
-    uvicorn.run("full_api:app", host="127.0.0.1", port=8001, reload=True) 
+    logger.info("Запуск API сервера напрямую через uvicorn...")
+    # Явный вызов init_db() перед запуском, т.к. on_event может не сработать при прямом запуске
+    logger.info("Выполняется явная инициализация базы данных перед запуском...")
+    init_db()
+    logger.info("Явная инициализация базы данных завершена.")
+    uvicorn.run("full_api:app", host="127.0.0.1", port=8000, reload=True) 

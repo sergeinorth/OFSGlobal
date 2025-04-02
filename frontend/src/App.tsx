@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, BrowserRouter, Navigate } from 'react-router-dom';
+import { Routes, Route, BrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import { Box } from '@mui/material';
 import './styles/App.css';
 
@@ -11,11 +11,13 @@ import DivisionsPage from './pages/divisions/DivisionsPage';
 import PositionsPage from './pages/positions/PositionsPage';
 import StaffList from './components/staff/StaffList';
 import StaffForm from './components/staff/StaffForm';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 
 // Новые страницы для новой структуры ОФС
 import DashboardPage from './pages/DashboardPage';
 import TelegramBotPage from './pages/TelegramBotPage';
-import AdminDatabasePage from './pages/AdminDatabasePage';
 import NotFoundPage from './pages/NotFoundPage';
 
 // Новые страницы администрирования с использованием роутера
@@ -34,49 +36,51 @@ const App: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<MainLayout />}>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/landing" element={<LandingPage />} />
+        <Route path="/" element={<MainLayout><Outlet /></MainLayout>}>
           <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="telegram-bot" element={<TelegramBotPage />} />
+          <Route path="dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+          <Route path="telegram-bot" element={<ProtectedRoute><TelegramBotPage /></ProtectedRoute>} />
           <Route path="organization-structure">
             <Route index element={<Navigate to="/organization-structure/business" replace />} />
-            <Route path="business" element={<OrganizationStructurePage />} />
-            <Route path="legal" element={<OrganizationStructurePage />} />
-            <Route path="territorial" element={<OrganizationStructurePage />} />
+            <Route path="business" element={<ProtectedRoute><OrganizationStructurePage /></ProtectedRoute>} />
+            <Route path="legal" element={<ProtectedRoute><OrganizationStructurePage /></ProtectedRoute>} />
+            <Route path="territorial" element={<ProtectedRoute><OrganizationStructurePage /></ProtectedRoute>} />
           </Route>
-          <Route path="functional-relations" element={<FunctionalRelationsPage />} />
+          <Route path="functional-relations" element={<ProtectedRoute><FunctionalRelationsPage /></ProtectedRoute>} />
           
           {/* Новая структура роутов для администрирования */}
           <Route path="admin">
             {/* Редирект с корневого пути admin на страницу организаций */}
             <Route index element={<Navigate to="/admin/organizations" replace />} />
-            <Route path="organizations" element={<AdminOrganizationsPage />} />
-            <Route path="divisions" element={<AdminDivisionsPage />} />
-            <Route path="positions" element={<AdminPositionsPage />} />
-            <Route path="staff" element={<AdminStaffPage />} />
-            <Route path="functional-relations" element={<AdminFunctionalRelationsPage />} />
+            <Route path="organizations" element={<ProtectedRoute><AdminOrganizationsPage /></ProtectedRoute>} />
+            <Route path="divisions" element={<ProtectedRoute><AdminDivisionsPage /></ProtectedRoute>} />
+            <Route path="positions" element={<ProtectedRoute><AdminPositionsPage /></ProtectedRoute>} />
+            <Route path="staff" element={<ProtectedRoute><AdminStaffPage /></ProtectedRoute>} />
+            <Route path="functional-relations" element={<ProtectedRoute><AdminFunctionalRelationsPage /></ProtectedRoute>} />
           </Route>
           
           {/* Старый роут - оставляем для обратной совместимости, но редиректим на новую страницу */}
           <Route path="admin-database" element={<Navigate to="/admin/organizations" replace />} />
           
-          <Route path="profile" element={<Profile />} />
-          <Route path="settings" element={<Settings />} />
+          <Route path="profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="staff">
-            <Route index element={<StaffList />} />
-            <Route path="new" element={<StaffForm />} />
-            <Route path=":id" element={<StaffForm />} />
-            <Route path="profiles" element={<StaffList />} />
-            <Route path="competencies" element={<div>Компетенции сотрудников</div>} />
-            <Route path="training" element={<div>Обучение сотрудников</div>} />
-            <Route path="achievements" element={<div>Достижения сотрудников</div>} />
+            <Route index element={<ProtectedRoute><StaffList /></ProtectedRoute>} />
+            <Route path="new" element={<ProtectedRoute><StaffForm /></ProtectedRoute>} />
+            <Route path=":id" element={<ProtectedRoute><StaffForm /></ProtectedRoute>} />
+            <Route path="profiles" element={<ProtectedRoute><StaffList /></ProtectedRoute>} />
+            <Route path="competencies" element={<ProtectedRoute><div>Компетенции сотрудников</div></ProtectedRoute>} />
+            <Route path="training" element={<ProtectedRoute><div>Обучение сотрудников</div></ProtectedRoute>} />
+            <Route path="achievements" element={<ProtectedRoute><div>Достижения сотрудников</div></ProtectedRoute>} />
           </Route>
-          <Route path="reports" element={<Reports />} />
-          <Route path="divisions" element={<DivisionsPage />} />
-          <Route path="positions" element={<PositionsPage />} />
+          <Route path="reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+          <Route path="divisions" element={<ProtectedRoute><DivisionsPage /></ProtectedRoute>} />
+          <Route path="positions" element={<ProtectedRoute><PositionsPage /></ProtectedRoute>} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
-        <Route path="/landing" element={<LandingPage />} />
       </Routes>
     </BrowserRouter>
   );
