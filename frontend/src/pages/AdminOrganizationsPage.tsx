@@ -105,41 +105,38 @@ const AdminOrganizationsPage: React.FC = () => {
 
   const confirmDelete = async () => {
     setLoading(true);
-    
     try {
       await api.delete(`/organizations/${currentItem.id}`);
       setSuccess('Запись успешно удалена');
-      fetchData();
+      await fetchData(); // Обновляем данные после удаления
+      setConfirmDeleteOpen(false);
     } catch (err) {
+      console.error('Ошибка при удалении:', err);
       setError('Ошибка при удалении: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setLoading(false);
-      setConfirmDeleteOpen(false);
     }
   };
 
   const handleSaveItem = async () => {
     setLoading(true);
-    
     try {
-      let response;
-      
       if (currentItem.id) {
-        // Обновляем существующий элемент
-        response = await api.put(`/organizations/${currentItem.id}`, currentItem);
+        // Обновление существующей записи
+        await api.put(`/organizations/${currentItem.id}`, currentItem);
         setSuccess('Запись успешно обновлена');
       } else {
-        // Создаем новый элемент
-        response = await api.post(`/organizations/`, currentItem);
+        // Создание новой записи
+        await api.post('/organizations', currentItem);
         setSuccess('Запись успешно создана');
       }
-      
-      fetchData();
+      await fetchData(); // Обновляем данные после сохранения
+      setEditDialogOpen(false);
     } catch (err) {
+      console.error('Ошибка при сохранении:', err);
       setError('Ошибка при сохранении: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setLoading(false);
-      setEditDialogOpen(false);
     }
   };
 
@@ -202,6 +199,8 @@ const AdminOrganizationsPage: React.FC = () => {
 
   // Диалог редактирования
   const renderEditDialog = () => {
+    if (!currentItem) return null;
+
     return (
       <Dialog
         open={editDialogOpen}
@@ -210,69 +209,77 @@ const AdminOrganizationsPage: React.FC = () => {
         fullWidth
       >
         <DialogTitle>
-          {currentItem?.id ? 'Редактировать организацию' : 'Создать организацию'}
+          {currentItem.id ? 'Редактировать организацию' : 'Создать организацию'}
         </DialogTitle>
         <DialogContent>
-          <TextField
-            fullWidth
-            margin="dense"
-            name="name"
-            label="Название"
-            value={currentItem?.name || ''}
-            onChange={handleInputChange}
-          />
-          <TextField
-            fullWidth
-            margin="dense"
-            name="legal_name"
-            label="Юридическое название"
-            value={currentItem?.legal_name || ''}
-            onChange={handleInputChange}
-          />
-          <TextField
-            fullWidth
-            margin="dense"
-            name="code"
-            label="Код"
-            value={currentItem?.code || ''}
-            onChange={handleInputChange}
-          />
-          <TextField
-            fullWidth
-            margin="dense"
-            name="ckp"
-            label="ЦКП"
-            value={currentItem?.ckp || ''}
-            onChange={handleInputChange}
-          />
-          <FormControl fullWidth margin="dense">
-            <InputLabel>Активна</InputLabel>
-            <Select
-              name="is_active"
-              value={currentItem?.is_active ? "true" : "false"}
-              onChange={handleSelectChange}
-            >
-              <MenuItem value={"true"}>Да</MenuItem>
-              <MenuItem value={"false"}>Нет</MenuItem>
-            </Select>
-          </FormControl>
+          <Box sx={{ mt: 2 }}>
+            <TextField
+              fullWidth
+              required
+              margin="dense"
+              name="name"
+              label="Название"
+              value={currentItem.name || ''}
+              onChange={handleInputChange}
+              error={!currentItem.name}
+              helperText={!currentItem.name ? 'Обязательное поле' : ''}
+            />
+            <TextField
+              fullWidth
+              margin="dense"
+              name="legal_name"
+              label="Юридическое название"
+              value={currentItem.legal_name || ''}
+              onChange={handleInputChange}
+            />
+            <TextField
+              fullWidth
+              required
+              margin="dense"
+              name="code"
+              label="Код"
+              value={currentItem.code || ''}
+              onChange={handleInputChange}
+              error={!currentItem.code}
+              helperText={!currentItem.code ? 'Обязательное поле' : ''}
+            />
+            <TextField
+              fullWidth
+              margin="dense"
+              name="ckp"
+              label="ЦКП"
+              value={currentItem.ckp || ''}
+              onChange={handleInputChange}
+            />
+            <FormControl fullWidth margin="dense">
+              <InputLabel>Активна</InputLabel>
+              <Select
+                name="is_active"
+                value={currentItem.is_active ? "true" : "false"}
+                onChange={handleSelectChange}
+              >
+                <MenuItem value="true">Да</MenuItem>
+                <MenuItem value="false">Нет</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button
             variant="outlined"
-            startIcon={<CancelIcon />}
             onClick={() => setEditDialogOpen(false)}
+            disabled={loading}
           >
             Отмена
           </Button>
           <Button
             variant="contained"
             color="primary"
-            startIcon={<SaveIcon />}
             onClick={handleSaveItem}
-            disabled={loading}
+            disabled={loading || !currentItem.name || !currentItem.code}
+            startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
           >
-            {loading ? <CircularProgress size={24} /> : 'Сохранить'}
+            {loading ? 'Сохранение...' : 'Сохранить'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -281,6 +288,8 @@ const AdminOrganizationsPage: React.FC = () => {
 
   // Диалог подтверждения удаления
   const renderDeleteDialog = () => {
+    if (!currentItem) return null;
+    
     return (
       <Dialog
         open={confirmDeleteOpen}
@@ -289,13 +298,15 @@ const AdminOrganizationsPage: React.FC = () => {
         <DialogTitle>Подтверждение удаления</DialogTitle>
         <DialogContent>
           <Typography>
-            Вы действительно хотите удалить эту запись? Это действие нельзя отменить.
+            Вы действительно хотите удалить организацию "{currentItem.name}"?
+            Это действие нельзя отменить.
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button
             variant="outlined"
             onClick={() => setConfirmDeleteOpen(false)}
+            disabled={loading}
           >
             Отмена
           </Button>
@@ -304,8 +315,9 @@ const AdminOrganizationsPage: React.FC = () => {
             color="error"
             onClick={confirmDelete}
             disabled={loading}
+            startIcon={loading ? <CircularProgress size={20} /> : null}
           >
-            {loading ? <CircularProgress size={24} /> : 'Удалить'}
+            {loading ? 'Удаление...' : 'Удалить'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -315,19 +327,46 @@ const AdminOrganizationsPage: React.FC = () => {
   return (
     <Container maxWidth="xl">
       <Box sx={{ my: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4" component="h1" gutterBottom>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          mb: 3,
+          position: 'relative',
+          width: '100%'
+        }}>
+          <Typography 
+            variant="h4" 
+            component="h1" 
+            sx={{ 
+              fontSize: '1.5rem'
+            }}
+          >
             Администрирование организаций
           </Typography>
           
-          <Box>
+          <Box sx={{ 
+            display: 'flex',
+            gap: 1,
+            position: 'absolute',
+            right: '200px',  // Значительно увеличиваем отступ справа
+            top: '50%',
+            transform: 'translateY(-50%)'
+          }}>
             <Button
               variant="outlined"
-              startIcon={<RefreshIcon />}
+              startIcon={loading ? <CircularProgress size={20} /> : <RefreshIcon />}
               onClick={() => fetchData()}
-              sx={{ mr: 1 }}
+              disabled={loading}
+              sx={{ 
+                minWidth: '100px',
+                height: '36px',
+                backgroundColor: '#f5f5f5',
+                '&:hover': {
+                  backgroundColor: '#e0e0e0'
+                }
+              }}
             >
-              Обновить
+              {loading ? 'Обновление...' : 'Обновить'}
             </Button>
             
             <Button
@@ -335,6 +374,13 @@ const AdminOrganizationsPage: React.FC = () => {
               color="primary"
               startIcon={<AddIcon />}
               onClick={handleCreateItem}
+              sx={{ 
+                minWidth: '100px',
+                height: '36px',
+                '&:hover': {
+                  backgroundColor: '#7b1fa2'
+                }
+              }}
             >
               Создать
             </Button>
