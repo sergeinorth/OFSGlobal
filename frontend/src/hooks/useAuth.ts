@@ -14,6 +14,7 @@ export const useAuth = (): UseAuthReturn => {
     // Не проверяем авторизацию на странице логина
     if (window.location.pathname.includes('/login')) {
       console.log('[LOG:Auth] Страница логина, пропускаем проверку авторизации');
+      console.log(`[LOG:Auth] Текущий путь: ${window.location.pathname}`);
       return;
     }
 
@@ -35,6 +36,7 @@ export const useAuth = (): UseAuthReturn => {
   const login = async (username: string, password: string) => {
     try {
       console.log(`[LOG:Auth] Попытка входа для пользователя: ${username}`);
+      console.log(`[LOG:Auth] Текущий путь до входа: ${window.location.pathname}`);
 
       // Используем URLSearchParams для application/x-www-form-urlencoded
       const params = new URLSearchParams();
@@ -52,10 +54,12 @@ export const useAuth = (): UseAuthReturn => {
       const { access_token } = response.data;
       localStorage.setItem('token', access_token);
       console.log('[LOG:Auth] Успешный вход, токен сохранен');
+      console.log(`[LOG:Auth] Токен: ${access_token.substring(0, 15)}...`);
       
       setIsAuthenticated(true);
       
       // Перенаправляем на дашборд после успешного входа
+      console.log('[LOG:Auth] Перенаправление на /dashboard...');
       window.location.href = '/dashboard';
     } catch (error) {
       console.error('[LOG:Auth] Ошибка входа:', error);

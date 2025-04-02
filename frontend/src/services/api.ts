@@ -14,6 +14,17 @@ const api = axios.create({
 api.interceptors.request.use(
   config => {
     console.log(`[LOG:API] Отправка ${config.method?.toUpperCase()} запроса на ${config.url}`);
+    
+    // Проверка токена при каждом запросе
+    const token = localStorage.getItem('token');
+    if (token) {
+      console.log(`[LOG:API] Токен найден: ${token.substring(0, 15)}...`);
+      // Добавляем токен авторизации
+      config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      console.log('[LOG:API] Токен не найден в localStorage');
+    }
+    
     return config;
   },
   error => {
@@ -38,6 +49,7 @@ api.interceptors.response.use(
         const isLoginPage = window.location.pathname.includes('/login');
         if (!isLoginPage && error.config.url !== '/login/test-token') {
           // Редиректим на логин только если мы не на странице логина и запрос не на проверку токена
+          console.log('[LOG:API] Перенаправление на страницу логина...');
           window.location.href = '/login';
         }
         
@@ -54,16 +66,5 @@ api.interceptors.response.use(
     }
   }
 );
-
-// Настройка токена авторизации
-api.interceptors.request.use((config) => {
-  // Добавляем токен авторизации
-  const token = localStorage.getItem('token');
-  if (token) {
-    console.log('[LOG:API] Добавляем токен авторизации к запросу');
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
 
 export default api; 
