@@ -14,9 +14,8 @@ interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
-// Возвращаем явное указание URL бэкенда
-// Это работало для основного API (staff), и мы подгоним auth_api под этот же формат
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Меняем порт на 8001, так как бэкенд теперь работает там
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 
 // Настройки загрузки файлов
 export const UPLOAD_MAX_SIZE = 5 * 1024 * 1024; // 5MB
