@@ -23,7 +23,8 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: 'http://localhost:8000',
           changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/api/, ''),
+          // Убираем rewrite, чтобы префикс /api передавался на бэкенд
+          // rewrite: (path) => path.replace(/^\/api/, ''), 
         },
       },
     },

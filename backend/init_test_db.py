@@ -3,9 +3,10 @@ import sys
 import sqlite3
 from datetime import datetime
 from passlib.context import CryptContext
+import bcrypt  # Импортируем bcrypt
 
-# Путь к базе данных
-DATABASE_PATH = "./new_app.db"
+# Определяем путь к базе данных
+DATABASE_PATH = 'full_api_new.db'  # <-- Используем ту же базу, что и в auth_api.py
 
 # Настройки хеширования паролей
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

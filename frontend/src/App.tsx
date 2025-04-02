@@ -13,6 +13,7 @@ import StaffList from './components/staff/StaffList';
 import StaffForm from './components/staff/StaffForm';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 
 // Новые страницы для новой структуры ОФС
 import DashboardPage from './pages/DashboardPage';
@@ -36,6 +37,7 @@ const App: React.FC = () => {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
         <Route path="/landing" element={<LandingPage />} />
         <Route path="/" element={<MainLayout><Outlet /></MainLayout>}>
           <Route index element={<Navigate to="/dashboard" replace />} />

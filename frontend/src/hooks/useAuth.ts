@@ -20,6 +20,9 @@ export const useAuth = (): UseAuthReturn => {
 
     try {
       // Для проверки аутентификации используем FastAPI эндпоинт без префикса
+      const token = localStorage.getItem('token');
+      console.log(`[LOG:Auth] Перед запросом test-token, токен: ${token ? 'присутствует' : 'отсутствует'}`);
+      
       await api.get('/login/test-token');
       setIsAuthenticated(true);
       console.log('[LOG:Auth] Пользователь аутентифицирован');
@@ -50,17 +53,37 @@ export const useAuth = (): UseAuthReturn => {
         }
       });
 
+      // Проверка ответа
+      console.log('[LOG:Auth] Ответ на запрос логина:', response.data);
+      
       // Сохраняем токен
       const { access_token } = response.data;
+      
+      if (!access_token) {
+        console.error('[LOG:Auth] Ошибка: токен отсутствует в ответе!');
+        throw new Error('Token missing in response');
+      }
+      
+      // Очищаем существующий токен перед сохранением нового
+      localStorage.removeItem('token');
+      
+      // Сохраняем новый токен
       localStorage.setItem('token', access_token);
       console.log('[LOG:Auth] Успешный вход, токен сохранен');
       console.log(`[LOG:Auth] Токен: ${access_token.substring(0, 15)}...`);
       
+      // Проверяем, что токен действительно сохранился
+      const savedToken = localStorage.getItem('token');
+      console.log(`[LOG:Auth] Проверка сохранения токена: ${savedToken ? savedToken.substring(0, 15) + '...' : 'не сохранен'}`);
+      
       setIsAuthenticated(true);
       
-      // Перенаправляем на дашборд после успешного входа
-      console.log('[LOG:Auth] Перенаправление на /dashboard...');
-      window.location.href = '/dashboard';
+      // Используем задержку перед редиректом, чтобы localStorage успел обновиться
+      console.log('[LOG:Auth] Подготовка к перенаправлению на /dashboard...');
+      setTimeout(() => {
+        console.log('[LOG:Auth] Выполняю перенаправление на /dashboard...');
+        window.location.href = '/dashboard';
+      }, 100);
     } catch (error) {
       console.error('[LOG:Auth] Ошибка входа:', error);
       throw new Error('Login failed');

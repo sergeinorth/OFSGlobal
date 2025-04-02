@@ -19,8 +19,12 @@ api.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token) {
       console.log(`[LOG:API] Токен найден: ${token.substring(0, 15)}...`);
-      // Добавляем токен авторизации
-      config.headers.Authorization = `Bearer ${token}`;
+      
+      // Явно выставляем заголовок авторизации
+      config.headers['Authorization'] = `Bearer ${token}`;
+      
+      // Проверяем, что заголовок установлен
+      console.log(`[LOG:API] Заголовок Authorization установлен: ${config.headers['Authorization']}`);
     } else {
       console.log('[LOG:API] Токен не найден в localStorage');
     }
@@ -44,6 +48,7 @@ api.interceptors.response.use(
       // Проверяем статус ошибки
       if (error.response.status === 401) {
         console.error('[LOG:API] Ошибка 401: Необходима авторизация');
+        console.log('[LOG:API] Заголовки запроса:', error.config.headers);
         
         // Проверяем, что мы не на странице логина, чтобы избежать бесконечной перезагрузки
         const isLoginPage = window.location.pathname.includes('/login');

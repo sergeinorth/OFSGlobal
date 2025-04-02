@@ -8,9 +8,11 @@ import {
   Paper,
   CircularProgress,
   Alert,
+  Link,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useAuth } from '../hooks/useAuth';
+import { Link as RouterLink } from 'react-router-dom';
 
 // Стилизованные компоненты в стиле Cryptonite
 const StyledPaper = styled(Paper)(({ theme }) => ({
@@ -161,6 +163,22 @@ const LoginPage: React.FC = () => {
             >
               {loading ? <CircularProgress size={24} color="inherit" /> : 'Войти'}
             </StyledButton>
+            
+            <Box sx={{ mt: 2, textAlign: 'center' }}>
+              <Link 
+                component={RouterLink} 
+                to="/register" 
+                variant="body2"
+                sx={{ 
+                  color: 'rgba(157, 106, 245, 0.8)',
+                  '&:hover': {
+                    color: 'rgba(157, 106, 245, 1)',
+                  } 
+                }}
+              >
+                Нет аккаунта? Зарегистрироваться
+              </Link>
+            </Box>
           </Box>
         </StyledPaper>
       </Container>
