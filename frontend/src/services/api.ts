@@ -10,6 +10,9 @@ const api = axios.create({
   withCredentials: false  // Отключаем для работы без сессий
 });
 
+// !!! ОТЛАДОЧНЫЙ ЛОГ: Проверяем реальный baseURL
+console.log(`[LOG:API_CONFIG] Используемый baseURL для axios: ${api.defaults.baseURL}`);
+
 // Логи запросов
 api.interceptors.request.use(
   config => {
